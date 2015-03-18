@@ -29,8 +29,7 @@ package com.sequoiadb.spark.util
 import com.sequoiadb.base.SequoiadbDatasource
 import com.sequoiadb.base.Sequoiadb
 import com.sequoiadb.spark.SequoiadbException
-import java.util.ArrayList
-import java.util.Arrays
+import scala.collection.JavaConversions._
 import org.apache.spark.sql.SaveMode
 import com.sequoiadb.exception.BaseException
 import com.sequoiadb.spark.SequoiadbConfig
@@ -127,7 +126,7 @@ object CollectionUtil {
     var connection : Option[Sequoiadb] = None
     try {
       ds = Option(new SequoiadbDatasource (
-          new ArrayList(Arrays.asList(config[List[String]](SequoiadbConfig.Host).toArray: _*)),
+          config[List[String]](SequoiadbConfig.Host),
           config[String](SequoiadbConfig.Username),
           config[String](SequoiadbConfig.Password),
           ConnectionUtil.initConfigOptions,

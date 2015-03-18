@@ -120,6 +120,7 @@ trait JsonSupport {
       case value: BSONTimestamp=>value.getTime().toShort
       case value: Date=>value.getTime().toShort
       case value: String => value.toShort
+      case _ => 0
     }
   }
   
@@ -134,6 +135,7 @@ trait JsonSupport {
       case value: java.lang.Boolean => value
       case value: java.math.BigInteger => if ( value == 0 ) false else true
       case value: java.math.BigDecimal => if ( value == 0 ) false else true
+      case _ => false
     }
   }
   
@@ -151,6 +153,7 @@ trait JsonSupport {
       case value: BSONTimestamp=>value.getTime().toByte
       case value: Date=>value.getTime().toByte
       case value: String => value.toByte
+      case _ => 0
     }
   }
   
@@ -168,6 +171,7 @@ trait JsonSupport {
       case value: BSONTimestamp=>value.getTime().toFloat
       case value: Date=>value.getTime().toFloat
       case value: String => value.toFloat
+      case _ => 0
     }
   }
   
@@ -179,6 +183,7 @@ trait JsonSupport {
       case value: Date=>new Timestamp(value.getTime())
       case value: String=> new Timestamp((new SimpleDateFormat(
           "yyyy-MM-dd.HH:mm:ss")).parse(value).getTime())
+      case _ => new Timestamp(0)
     }
   }
   
@@ -200,6 +205,7 @@ trait JsonSupport {
       case value: BSONTimestamp=>value.getTime().toInt
       case value: Date=>value.getTime().toInt
       case value: String => value.toInt
+      case _ => 0
     }
   }
 
@@ -217,6 +223,7 @@ trait JsonSupport {
       case value: BSONTimestamp=>value.getTime().toLong
       case value: Date=>value.getTime().toLong
       case value: String => value.toLong
+      case _ => 0
     }
   }
 
@@ -234,6 +241,7 @@ trait JsonSupport {
       case value: BSONTimestamp=>value.getTime().toDouble
       case value: Date=>value.getTime().toDouble
       case value: String => value.toDouble
+      case _ => 0
     }
   }
 
@@ -251,6 +259,7 @@ trait JsonSupport {
       case value: BSONTimestamp=>Decimal(value.getTime().toLong)
       case value: Date=>Decimal(value.getTime().toLong)
       case value: String => Decimal(value)
+      case _ => Decimal(0)
     }
   }
   
@@ -270,6 +279,7 @@ trait JsonSupport {
       case value: String => ByteUtil.getBytes(value)
       case value: Binary => value.getData
       case value: ObjectId => value.toByteArray()
+      case _ => Array[Byte]()
     }
   }
 
