@@ -68,7 +68,10 @@ case class SequoiadbRelation(
    */
   @transient private lazy val lazySchema =
     SequoiadbSchema(
-      new SequoiadbRDD(sqlContext, config, rddPartitioner),
+      SequoiadbRDD(
+        sqlContext,
+        config,
+        Option(rddPartitioner)),
       config[Double](SequoiadbConfig.SamplingRatio)).schema()
 
   /**
@@ -86,10 +89,10 @@ case class SequoiadbRelation(
     requiredColumns : Array[String],
     filters : Array[Filter]): RDD[Row] = {
 
-    val rdd = new SequoiadbRDD(
+    val rdd = SequoiadbRDD(
       sqlContext,
       config,
-      rddPartitioner,
+      Option(rddPartitioner),
       requiredColumns,
       filters)
 
