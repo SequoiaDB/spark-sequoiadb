@@ -23,8 +23,12 @@ You can also download the project separately by doing:
 git clone https://github.com/SequoiaDB/spark-sequoiadb.git
 mvn clean install
 ```
+spark-sequoiadb is built with Scala-2.10 by default. You can use the following command to build with scala-2.11:
+```
+mvn -Pscala-2.11 package
+```
 You can load the library into spark-shell by using --jars command line option.  
-$ bin/spark-shell --jars /Users/sequoiadb/spark-sequoiadb/lib/sequoiadb-driver-1.12.0.jar,/Users/sequoiadb/spark-sequoiadb/target/spark-sequoiadb-1.12.0-SNAPSHOT.jar  
+$ bin/spark-shell --jars /Users/sequoiadb/spark-sequoiadb/lib/sequoiadb-driver-1.12.0.jar,/Users/sequoiadb/spark-sequoiadb/target/spark-sequoiadb_2.10-1.12.jar
 …  
 15/03/09 14:35:45 INFO HttpServer: Starting HTTP Server  
 15/03/09 14:35:45 INFO Utils: Successfully started service 'HTTP class server' on port 59998.  
