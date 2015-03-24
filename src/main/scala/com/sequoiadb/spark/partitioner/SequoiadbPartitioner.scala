@@ -31,8 +31,10 @@ import com.sequoiadb.spark.SequoiadbConfig
 import com.sequoiadb.spark.SequoiadbException
 import com.sequoiadb.spark.schema.SequoiadbRowConverter
 import com.sequoiadb.spark.util.ConnectionUtil
+import com.sequoiadb.spark.io.SequoiadbReader
 import com.sequoiadb.base.SequoiadbDatasource
 import com.sequoiadb.base.Sequoiadb
+import com.sequoiadb.base.DBQuery
 import com.sequoiadb.exception.BaseException
 import com.sequoiadb.exception.SDBErrorLookup
 import org.bson.BSONObject
@@ -47,7 +49,15 @@ import org.apache.spark.sql.sources.Filter
  */
 class SequoiadbPartitioner(
   config: SequoiadbConfig) extends Serializable {
-  
+
+  /**
+   * requiredColumns represents the projection fields of the query
+   */
+  var requiredColumns: Array[String] = Array[String]()
+  /**
+   * filters represents the predicate list of the query
+   */
+  var filters: Array[Filter] = Array[Filter]()
   /**
    * build full collection name from cs and cl name
    */
@@ -87,78 +97,7 @@ class SequoiadbPartitioner(
       case ex: Exception => throw SequoiadbException(ex.getMessage,ex)
     }
   }
-  
-  /**
-   * Determine whether a given collection is main collection or regular collection
-   * @param connection SequoiaDB connection object
-   */
-  private def isMainCollection ( connection: Option[Sequoiadb] ): Boolean = {
-    try {
-      // perform catalog snapshot and extract IsMainCL attribute
-      // if the result does not include such field or it's false, that means normal collection
-      val snapcur = connection.get.getSnapshot ( Sequoiadb.SDB_SNAP_CATALOG,
-          "{Name:\"" + collectionname + "\"}",
-          "{IsMainCL:false}",
-          null )
-      // we attempt to pick the first element in result set since collection name is unique
-      if ( snapcur.hasNext ) {
-        // convert to map
-        val colinfo = SequoiadbRowConverter.dbObjectToMap(snapcur.getNext)
-        // close cursor
-        snapcur.close
-        colinfo("IsMainCL").asInstanceOf[Boolean]
-      }
-      else {
-        // if we cannot find anything by snapshot, that means the collection doesn't exist
-        val ex = new BaseException ( "SDB_DMS_NOTEXIST" )
-        throw SequoiadbException ( ex.getMessage, ex )
-      }
-    }
-    catch {
-      case ex: Exception => throw SequoiadbException ( ex.getMessage, ex )
-    }
-  }
-  
-  /**
-   * Extract child collections from main collection
-   * @param connection SequoiaDB connection object
-   */
-  private def getChildForMainCollection (
-       connection: Option[Sequoiadb] ): Option[ArrayBuffer[SequoiadbCollection]] = {
-    val ab: ArrayBuffer[SequoiadbCollection] = new ArrayBuffer[SequoiadbCollection]()
-    try {
-      // perform catalog snapshot and extract CataInfo field
-      val snapcur = connection.get.getSnapshot ( Sequoiadb.SDB_SNAP_CATALOG,
-          "{Name:\"" + collectionname + "\"}",
-          "{CataInfo:1}",
-          null )
-      // for each record, we get CataInfo.SubCLName
-      if ( snapcur.hasNext ) {
-        val colinfo = SequoiadbRowConverter.dbObjectToMap(snapcur.getNext)
-        // close cursor
-        snapcur.close
-        // Make sure it's array, otherwise ignore
-        if ( colinfo("CataInfo").isInstanceOf[BasicBSONList] ) {
-          // for each element in array, we pickup SubCLName field and append to ab
-          colinfo("CataInfo").asInstanceOf[BasicBSONList].toMap.map {
-            case ( k,v )=>(
-                ab.append ( SequoiadbCollection ( SequoiadbRowConverter.dbObjectToMap(
-                    v.asInstanceOf[BSONObject])("SubCLName").asInstanceOf[String])))
-          }
-        }
-      }
-      else {
-        // if there's nothing returned by snapshot, it means the collection doesn't exist
-        val ex = new BaseException ( "SDB_DMS_NOTEXIST" )
-        throw SequoiadbException ( ex.getMessage, ex )
-      }
-      Option(ab)
-    }
-    catch {
-      case ex: Exception => throw SequoiadbException ( ex.getMessage, ex )
-    }
-  }
-  
+
   /**
    * Convert rg_list to replication group map
    * @param rg_list replication group list
@@ -188,46 +127,6 @@ class SequoiadbPartitioner(
       rg_map += ( rg("GroupName").asInstanceOf[String] -> hostArray )
     }
     rg_map
-  }
-  
-  /**
-   * Get all group names associated with a collection
-   * @param connection SequoiaDB connection object
-   * @param collection Collection name, note it could be either subCL or normal CL
-   */
-  private def getCollectionGroupName (
-      connection: Option[Sequoiadb], 
-      collection: SequoiadbCollection ): Array[String] = {
-    val ab: ArrayBuffer[String] = new ArrayBuffer[String]()
-    try {
-      // perform collection snapshot and pickup Details field
-      val snapcur = connection.get.getSnapshot ( Sequoiadb.SDB_SNAP_COLLECTIONS,
-          "{Name:\"" + collection.collectionname + "\"}",
-          "{Details:1}",
-          null )
-      if ( snapcur.hasNext ) {
-        val colinfo = SequoiadbRowConverter.dbObjectToMap(snapcur.getNext)
-        // close cursor
-        snapcur.close
-        // get details field and make sure it's array
-        if ( colinfo("Details").isInstanceOf[BasicBSONList] ) {
-          // for each element in array, pickup GroupName field and append to result
-          colinfo("Details").asInstanceOf[BasicBSONList].toMap.map {
-            case ( k,v )=>(
-                ab.append ( v.asInstanceOf[BSONObject].get("GroupName").asInstanceOf[String]))
-          }
-        }
-      }
-      else {
-        // if snapshot doesn't give any output, that means collection doesn't exist
-        val ex = new BaseException ( "SDB_DMS_NOTEXIST" )
-        throw SequoiadbException ( ex.getMessage, ex )
-      }
-      ab.toArray
-    }
-    catch {
-      case ex: Exception => throw SequoiadbException ( ex.getMessage, ex )
-    }
   }
 
   /**
@@ -267,38 +166,40 @@ class SequoiadbPartitioner(
         // we now need to extract rg list and form a map
         // each key in map represent a group name, with one or more hosts associated with a group
         rg_map = makeRGMap(rg_list.get)
-  
-        // now we have connection and we know it's cluster setup
-        // collections is a list of collection or subcollections we need to query
-        var collections: Option[ArrayBuffer[SequoiadbCollection]] = None
-        // determine if it's main collection or normal
-        if ( isMainCollection ( connection )) {
-          // for main collection, we need to append collections with all subcollections
-          // TODO: optimization can be done here in order to filter out
-          // unnecessary subcollections
-          collections = getChildForMainCollection ( connection )
-        }
-        else {
-          // if it's normal collection, just append to collection array
-          collections = Option ( ArrayBuffer[SequoiadbCollection](
-              SequoiadbCollection(collectionname) ) )
-        }
-        
-        // now let's loop through each collection and make out the partitions
+
+        // now let's try to get explain
+        val cursor = connection.get.getCollectionSpace(
+          config[String](SequoiadbConfig.CollectionSpace)).getCollection(
+            config[String](SequoiadbConfig.Collection)
+          ).query(
+            SequoiadbReader.queryPartition(filters),
+            SequoiadbReader.selectFields(requiredColumns),
+            null,
+            null,
+            DBQuery.FLG_QUERY_EXPLAIN )
+        // loop for every fields in the explain result
         var partition_id = 0
-        for ( collection <- collections.get.toArray ) {
-          // extract group information for the given sub collection or normal cl
-          val group_list = getCollectionGroupName ( connection, collection )
-          // loop for each group
-          for ( group <- group_list ) {
-            // use different partition id, group information and associated collection
-            partition_list += SequoiadbPartition ( partition_id,
-                rg_map(group),
-                collection)
-            // increment partition id
+        while ( cursor.hasNext ) {
+          // note each row represent a group
+          val row = SequoiadbRowConverter.dbObjectToMap(cursor.getNext)
+          // record the group name
+          val group = rg_map(row("GroupName").asInstanceOf[String])
+          if ( row.contains("SubCollections") ) {
+            // if subcollections field exist, that means it's main cl
+            for ( collection <- SequoiadbRowConverter.dbObjectToMap(
+              row("SubCollections").asInstanceOf[BasicBSONList]) ) {
+              // get the collection name
+              partition_list += SequoiadbPartition ( partition_id, group,
+                SequoiadbCollection(collection._2.asInstanceOf[BSONObject].get("Name").asInstanceOf[String]))
+              partition_id += 1
+            }
+          } else {
+            // otherwise it means normal cl
+            partition_list += SequoiadbPartition ( partition_id, group,
+              SequoiadbCollection(row("Name").asInstanceOf[String]))
             partition_id += 1
-          } // for ( group <- group_list )
-        } // for ( collection <- collections.get.toArray )
+          }
+        }
       } // if ( rg_list == None )
     } catch {
       case ex: Exception =>
@@ -313,5 +214,4 @@ class SequoiadbPartitioner(
     } // finally
     partition_list.toArray
   }
-
 }
