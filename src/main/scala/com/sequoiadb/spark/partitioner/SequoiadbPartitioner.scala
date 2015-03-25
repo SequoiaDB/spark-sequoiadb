@@ -26,6 +26,7 @@ package com.sequoiadb.spark.partitioner
  * Date     Who                Description
  * ======== ================== ================================================
  * 20150305 Tao Wang           Initial Draft
+ * 20150324 Tao Wang           Use DBCollection.explain instead of snapshot
  */
 import com.sequoiadb.spark.SequoiadbConfig
 import com.sequoiadb.spark.SequoiadbException
@@ -49,15 +50,6 @@ import org.apache.spark.sql.sources.Filter
  */
 class SequoiadbPartitioner(
   config: SequoiadbConfig) extends Serializable {
-
-  /**
-   * requiredColumns represents the projection fields of the query
-   */
-  var requiredColumns: Array[String] = Array[String]()
-  /**
-   * filters represents the predicate list of the query
-   */
-  var filters: Array[Filter] = Array[Filter]()
   /**
    * build full collection name from cs and cl name
    */
@@ -131,7 +123,7 @@ class SequoiadbPartitioner(
 
   /**
    * Extract partition information for given collection
-   * TODO: Use query explain based on filters to get real necessary shards
+   * @param filters
    */
   def computePartitions(filters: Array[Filter]): Array[SequoiadbPartition] = {
     var ds : Option[SequoiadbDatasource] = None
@@ -173,9 +165,7 @@ class SequoiadbPartitioner(
             config[String](SequoiadbConfig.Collection)
           ).query(
             SequoiadbReader.queryPartition(filters),
-            SequoiadbReader.selectFields(requiredColumns),
-            null,
-            null,
+            null, null, null,
             DBQuery.FLG_QUERY_EXPLAIN )
         // loop for every fields in the explain result
         var partition_id = 0

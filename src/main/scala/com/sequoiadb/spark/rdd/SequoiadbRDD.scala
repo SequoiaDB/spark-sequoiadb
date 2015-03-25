@@ -35,7 +35,8 @@ class SequoiadbRDD(
 
 
   override def getPartitions: Array[Partition] =
-    partitioner.getOrElse(new SequoiadbPartitioner(config)).computePartitions(filters).asInstanceOf[Array[Partition]]
+    partitioner.getOrElse(new SequoiadbPartitioner(config)).computePartitions(
+      filters).asInstanceOf[Array[Partition]]
 
   override def getPreferredLocations(split: Partition): Seq[String] =
     split.asInstanceOf[SequoiadbPartition].hosts.map(_.getHost)
