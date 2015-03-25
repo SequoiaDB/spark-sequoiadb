@@ -117,19 +117,6 @@
                 </executions>
             </plugin>
             <plugin>
-              <groupId>net.alchim31.maven</groupId>
-              <artifactId>scala-maven-plugin</artifactId>
-              <version>3.2.0</version>
-              <executions>
-                <execution>
-                  <id>scaladoc</id>
-                  <goals>
-                    <goal>doc-jar</goal>
-                  </goals>
-                </execution>
-              </executions>
-            </plugin>
-            <plugin>
                 <groupId>org.scala-tools</groupId>
                 <artifactId>maven-scala-plugin</artifactId>
                 <version>2.15.2</version>
@@ -281,6 +268,19 @@
             <configuration>
                 <skipTests>true</skipTests>
             </configuration>
+        </plugin>
+        <plugin>
+          <groupId>net.alchim31.maven</groupId>
+          <artifactId>scala-maven-plugin</artifactId>
+          <version>3.2.0</version>
+          <executions>
+            <execution>
+              <id>scaladoc</id>
+              <goals>
+                <goal>doc-jar</goal>
+              </goals>
+            </execution>
+          </executions>
         </plugin>
         <plugin>
             <groupId>org.scalatest</groupId>
