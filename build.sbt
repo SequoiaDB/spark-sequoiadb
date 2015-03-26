@@ -1,18 +1,12 @@
 name := "spark-sequoiadb"
 
-version := "0.0.1"
+version := "1.12"
 
 organization := "com.sequoiadb"
 
 scalaVersion := "2.10.4"
 
-libraryDependencies += "org.apache.spark" %% "spark-sql" % "1.3.0-rc2" % "provided"
-
-libraryDependencies += "org.apache.commons" % "commons-csv" % "1.1"
-
-libraryDependencies += "org.slf4j" % "slf4j-api" % "1.7.5" % "provided"
-
-//libraryDependencies += "com.sequoiadb" % "sequoiadb-driver" % "1.10"
+libraryDependencies += "com.sequoiadb" % "sequoiadb-driver" % "1.12"
 
 resolvers ++= Seq(
   "Apache Staging" at "https://repository.apache.org/content/repositories/staging/",
@@ -21,6 +15,16 @@ resolvers ++= Seq(
 )
 
 publishMavenStyle := true
+
+resolvers += "Spark Package Main Repo" at "https://dl.bintray.com/spark-packages/maven"
+
+spName := "SequoiaDB/spark-sequoiadb"
+
+sparkVersion := "1.3.0"
+
+sparkComponents ++= Seq("sql")
+
+spAppendScalaVersion := true
 
 publishTo := {
   val nexus = "https://oss.sonatype.org/"
@@ -52,3 +56,4 @@ pomExtra := (
   </developers>)
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.1" % "test"
+
