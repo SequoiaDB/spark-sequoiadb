@@ -57,3 +57,9 @@ pomExtra := (
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.1" % "test"
 
+credentials += Credentials(Path.userHome / ".ivy2" / ".sbtcredentials")
+
+licenses += "Apache-2.0" -> url("http://opensource.org/licenses/Apache-2.0") 
+
+spIncludeMaven := true
+
