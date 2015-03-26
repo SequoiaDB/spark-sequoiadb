@@ -27,6 +27,10 @@ spark-sequoiadb is built with Scala-2.10 by default. You can use the following c
 ```
 mvn -Pscala-2.11 package
 ```
+or
+```
+sbt/sbt "+ package"
+```
 You can load the library into spark-shell by using --jars command line option.  
 $ bin/spark-shell --jars /Users/sequoiadb/spark-sequoiadb/lib/sequoiadb-driver-1.12.0.jar,/Users/sequoiadb/spark-sequoiadb/target/spark-sequoiadb_2.10-1.12.jar
 …  

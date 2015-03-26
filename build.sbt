@@ -4,7 +4,7 @@ version := "1.12"
 
 organization := "com.sequoiadb"
 
-scalaVersion := "2.10.4"
+crossScalaVersions := Seq ( "2.10.4", "2.11.0" )
 
 libraryDependencies += "com.sequoiadb" % "sequoiadb-driver" % "1.12"
 
