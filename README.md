@@ -15,7 +15,7 @@ This library requires Spark 1.3+, Scala 2.10.4+ and sequoiadb-driver-1.12
 You can link against this library by putting the following lines in your program:
 ```
 <groupId>com.sequoiadb</groupId>
-<artifactId>spark-sequoiadb</artifactId>
+<artifactId>spark-sequoiadb_2.10</artifactId>
 <version>LATEST</version>
 ```
 You can also download the project separately by doing:
