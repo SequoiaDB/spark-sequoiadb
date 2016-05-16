@@ -20,7 +20,7 @@ resolvers += "Spark Package Main Repo" at "https://dl.bintray.com/spark-packages
 
 spName := "SequoiaDB/spark-sequoiadb"
 
-sparkVersion := "1.3.0"
+sparkVersion := "1.6.1"
 
 sparkComponents ++= Seq("sql")
 

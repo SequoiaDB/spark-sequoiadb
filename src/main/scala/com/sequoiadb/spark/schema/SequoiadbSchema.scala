@@ -49,6 +49,7 @@ import com.sequoiadb.spark.rdd.SequoiadbRDD
 import org.bson.types.BasicBSONList
 import org.bson.BSONObject
 import scala.collection.JavaConversions._
+import org.apache.spark.unsafe.types.UTF8String
 
 /**
  * A custom RDD schema for SequoiaDB.
@@ -90,9 +91,34 @@ case class SequoiadbSchema(
     }
 
     case elem =>
+      val typeOfObject: PartialFunction[Any, DataType] = {
+        // The data type can be determined without ambiguity.
+        case obj: Boolean => BooleanType
+        case obj: Array[Byte] => BinaryType
+        case obj: String => StringType
+        case obj: UTF8String => StringType
+        case obj: Byte => ByteType
+        case obj: Short => ShortType
+        case obj: Int => IntegerType
+        case obj: Long => LongType
+        case obj: Float => FloatType
+        case obj: Double => DoubleType
+        case obj: java.sql.Date => DateType
+        case obj: java.math.BigDecimal => DecimalType.SYSTEM_DEFAULT
+        case obj: Decimal => DecimalType.SYSTEM_DEFAULT
+        case obj: java.sql.Timestamp => TimestampType
+        case null => NullType
+        // For other cases, there is no obvious mapping from the type of the given object to a
+        // Catalyst data type. A user should provide his/her specific rules
+        // (in a user-defined PartialFunction) to infer the Catalyst data type for other types of
+        // objects and then compose the user-defined PartialFunction with this one.
+      }
       val elemType: PartialFunction[Any, DataType] =
-        ScalaReflection.typeOfObject.orElse { case _ => StringType}
+        typeOfObject.orElse { case _ => StringType}
       elemType(elem)
+//      val elemType: PartialFunction[Any, DataType] =
+//        ScalaReflection.typeOfObject.orElse { case _ => StringType}
+//      elemType(elem)
 
   }
 
@@ -108,7 +134,7 @@ case class SequoiadbSchema(
    * @return
    */
   private def compatibleType(t1: DataType, t2: DataType): DataType = {
-    HiveTypeCoercion.findTightestCommonType(t1, t2) match {
+    HiveTypeCoercion.findTightestCommonTypeOfTwo(t1, t2) match {
       case Some(commonType) => commonType
 
       case None =>
