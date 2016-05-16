@@ -17,7 +17,6 @@
  */
 package com.sequoiadb.spark.schema
 
-import org.apache.spark.sql.test.TestSQLContext
 
 object TestJsonData {
 

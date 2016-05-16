@@ -27,7 +27,6 @@ import java.sql.Timestamp
 import org.apache.spark.sql.catalyst.expressions.GenericRow
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructType, _}
-import org.apache.spark.sql.test.TestSQLContext
 import org.scalatest.{FlatSpec, Matchers}
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConverters._
