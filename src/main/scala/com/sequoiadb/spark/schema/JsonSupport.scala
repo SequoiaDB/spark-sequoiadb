@@ -46,7 +46,7 @@ package com.sequoiadb.spark.schema
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.types.Decimal
 import java.sql.Timestamp
-import java.util.Date
+import java.sql.Date
 import org.bson.types.BSONTimestamp
 import org.bson.types.Binary
 import org.bson.types.ObjectId
@@ -118,7 +118,7 @@ trait JsonSupport {
       case value: java.math.BigInteger => value.shortValue
       case value: java.math.BigDecimal => value.shortValue
       case value: BSONTimestamp=>value.getTime().toShort
-      case value: Date=>value.getTime().toShort
+      case value: java.util.Date=>value.getTime().toShort
       case value: String => value.toShort
       case _ => 0
     }
@@ -151,7 +151,7 @@ trait JsonSupport {
       case value: java.math.BigInteger => value.byteValue
       case value: java.math.BigDecimal => value.byteValue
       case value: BSONTimestamp=>value.getTime().toByte
-      case value: Date=>value.getTime().toByte
+      case value: java.util.Date=>value.getTime().toByte
       case value: String => value.toByte
       case _ => 0
     }
@@ -169,7 +169,7 @@ trait JsonSupport {
       case value: java.math.BigInteger => value.floatValue
       case value: java.math.BigDecimal => value.floatValue
       case value: BSONTimestamp=>value.getTime().toFloat
-      case value: Date=>value.getTime().toFloat
+      case value: java.util.Date=>value.getTime().toFloat
       case value: String => value.toFloat
       case _ => 0
     }
@@ -180,7 +180,7 @@ trait JsonSupport {
       case value: java.lang.Integer=>new Timestamp(value.toLong)
       case value: java.lang.Long=>new Timestamp(value)
       case value: BSONTimestamp=>new Timestamp((value.getTime().toLong*1000))
-      case value: Date=>new Timestamp(value.getTime())
+      case value: java.util.Date=>new Timestamp(value.getTime())
       case value: String=> new Timestamp((new SimpleDateFormat(
           "yyyy-MM-dd.HH:mm:ss")).parse(value).getTime())
       case _ => new Timestamp(0)
@@ -203,7 +203,7 @@ trait JsonSupport {
       case value: java.math.BigInteger => value.intValue
       case value: java.math.BigDecimal => value.intValue
       case value: BSONTimestamp=>value.getTime().toInt
-      case value: Date=>value.getTime().toInt
+      case value: java.util.Date=>value.getTime().toInt
       case value: String => value.toInt
       case _ => 0
     }
@@ -221,7 +221,7 @@ trait JsonSupport {
       case value: java.math.BigInteger => value.longValue
       case value: java.math.BigDecimal => value.longValue
       case value: BSONTimestamp=>value.getTime().toLong
-      case value: Date=>value.getTime().toLong
+      case value: java.util.Date=>value.getTime().toLong
       case value: String => value.toLong
       case _ => 0
     }
@@ -239,7 +239,7 @@ trait JsonSupport {
       case value: java.math.BigInteger => value.doubleValue
       case value: java.math.BigDecimal => value.doubleValue
       case value: BSONTimestamp=>value.getTime().toDouble
-      case value: Date=>value.getTime().toDouble
+      case value: java.util.Date=>value.getTime().toDouble
       case value: String => value.toDouble
       case _ => 0
     }
@@ -257,7 +257,7 @@ trait JsonSupport {
       case value: java.math.BigInteger => Decimal(new java.math.BigDecimal(value))
       case value: java.math.BigDecimal => Decimal(value)
       case value: BSONTimestamp=>Decimal(value.getTime().toLong)
-      case value: Date=>Decimal(value.getTime().toLong)
+      case value: java.util.Date=>Decimal(value.getTime().toLong)
       case value: String => Decimal(value)
       case _ => Decimal(0)
     }
@@ -275,7 +275,7 @@ trait JsonSupport {
       case value: java.math.BigInteger => ByteUtil.getBytes(value.longValue)
       case value: java.math.BigDecimal => ByteUtil.getBytes(value.doubleValue)
       case value: BSONTimestamp=>ByteUtil.getBytes(value.getTime().toLong)
-      case value: Date=>ByteUtil.getBytes(value.getTime().toLong)
+      case value: java.util.Date=>ByteUtil.getBytes(value.getTime().toLong)
       case value: String => ByteUtil.getBytes(value)
       case value: Binary => value.getData
       case value: ObjectId => value.toByteArray()
@@ -323,3 +323,4 @@ trait JsonSupport {
   }
 
 }
+

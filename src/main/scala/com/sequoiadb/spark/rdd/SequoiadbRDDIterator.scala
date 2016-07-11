@@ -23,6 +23,8 @@ import _root_.com.sequoiadb.spark.io.SequoiadbReader
 import org.apache.spark._
 import org.apache.spark.sql.sources.Filter
 import org.bson.BSONObject
+import org.slf4j.{Logger, LoggerFactory}
+//import java.io.FileOutputStream;  
 
 /**
  * Source File Name = SequoiadbRDDIterator.scala
@@ -50,6 +52,9 @@ class SequoiadbRDDIterator(
   filters: Array[Filter])
   extends Iterator[BSONObject] {
 
+  
+  
+  private var LOG: Logger = LoggerFactory.getLogger(this.getClass.getName())
   protected var finished = false
   private var closed = false
   private var initialized = false

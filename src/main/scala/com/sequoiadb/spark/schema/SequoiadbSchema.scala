@@ -43,7 +43,7 @@ package com.sequoiadb.spark.schema
  * ======== ================== ================================================
  */
 import org.apache.spark.sql.catalyst.ScalaReflection
-import org.apache.spark.sql.catalyst.analysis.HiveTypeCoercion
+import org.apache.spark.sql.catalyst.analysis.TypeCoercion
 import org.apache.spark.sql.types._
 import com.sequoiadb.spark.rdd.SequoiadbRDD
 import org.bson.types.BasicBSONList
@@ -90,7 +90,7 @@ case class SequoiadbSchema(
       StructType(fields)
     }
 
-    case elem =>
+    case elem => 
       val typeOfObject: PartialFunction[Any, DataType] = {
         // The data type can be determined without ambiguity.
         case obj: Boolean => BooleanType
@@ -116,9 +116,6 @@ case class SequoiadbSchema(
       val elemType: PartialFunction[Any, DataType] =
         typeOfObject.orElse { case _ => StringType}
       elemType(elem)
-//      val elemType: PartialFunction[Any, DataType] =
-//        ScalaReflection.typeOfObject.orElse { case _ => StringType}
-//      elemType(elem)
 
   }
 
@@ -134,7 +131,7 @@ case class SequoiadbSchema(
    * @return
    */
   private def compatibleType(t1: DataType, t2: DataType): DataType = {
-    HiveTypeCoercion.findTightestCommonTypeOfTwo(t1, t2) match {
+    TypeCoercion.findTightestCommonTypeOfTwo(t1, t2) match {
       case Some(commonType) => commonType
 
       case None =>

@@ -26,7 +26,7 @@ import java.util.Date
 import java.sql.Timestamp
 import org.apache.spark.sql.catalyst.expressions.GenericRow
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.types.{StructType, _}
+import org.apache.spark.sql.types.{StructType,DecimalType, _}
 import org.scalatest.{FlatSpec, Matchers}
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConverters._
@@ -36,8 +36,11 @@ import scala.collection.JavaConversions._
  */
 class SequoiadbRowConverterTest extends FlatSpec
 with Matchers{
+  val MAX_PRECISION = 38
+  val SYSTEM_DEFAULT: DecimalType = DecimalType(MAX_PRECISION, 18)
+  val SequoiadbUnlimited: DecimalType = SYSTEM_DEFAULT
   val primitiveSchema = StructType(
-      StructField("decimal", DecimalType.Unlimited, true) ::
+      StructField("decimal", SequoiadbUnlimited, true) ::
       StructField("boolean", BooleanType, true) ::
       StructField("float", FloatType, true) ::
       StructField("double", DoubleType, true) ::
@@ -52,7 +55,7 @@ with Matchers{
       StructField("string", StringType, true) :: Nil)
       
   val embedSchema = StructType(
-      StructField("firstDecimal", DecimalType.Unlimited, true) ::
+      StructField("firstDecimal", SequoiadbUnlimited, true) ::
       StructField("firstString", StringType, true) ::
       StructField("firstObject", StructType(
           StructField("secondInt",IntegerType,true)::
