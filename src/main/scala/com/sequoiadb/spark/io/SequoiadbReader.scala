@@ -39,6 +39,9 @@ import com.sequoiadb.base.DBCursor
 import com.sequoiadb.base.SequoiadbDatasource
 import com.sequoiadb.base.Sequoiadb
 import scala.collection.JavaConversions._
+import org.slf4j.{Logger, LoggerFactory}
+//import java.io.FileOutputStream  
+import org.bson.util.JSON
 
 /**
  *
@@ -51,6 +54,8 @@ class SequoiadbReader(
   requiredColumns: Array[String],
   filters: Array[Filter]) {
 
+  
+  private var LOG: Logger = LoggerFactory.getLogger(this.getClass.getName())
   private var dbConnectionPool : Option[SequoiadbDatasource] = None
   private var dbConnection : Option[Sequoiadb] = None
   private var dbCursor : Option[DBCursor] = None
@@ -82,6 +87,8 @@ class SequoiadbReader(
    * @param partition Where to read from
    */
   def init(partition: Partition): Unit = {
+//    var out: FileOutputStream = new FileOutputStream ("/root/software/spark-2.0-hadoop2.6/logs/test.txt");;
+//    out.write ("enter SequoiadbReader.init function\n".getBytes)
     // convert from Spark Partition to SequoiadbPartition
     val sdbPartition = partition.asInstanceOf[SequoiadbPartition]
     try {
@@ -100,12 +107,37 @@ class SequoiadbReader(
       val cs = connection.getCollectionSpace(sdbPartition.collection.collectionspace)
       // get collection
       val cl = cs.getCollection(sdbPartition.collection.collection)
-      // perform query
-      dbCursor = Option(cl.query (
-          SequoiadbReader.queryPartition(filters),
-          SequoiadbReader.selectFields(requiredColumns),
-          null,
-          null))
+      if (sdbPartition.scanType.equals(SequoiadbConfig.scanTypeGetQueryMeta)){
+        var _metaObjStr: String = null
+        var _metaObj: BSONObject = null
+        if (sdbPartition.metaObjStr != None){
+          _metaObjStr = sdbPartition.metaObjStr.get
+          _metaObj = JSON.parse (_metaObjStr).asInstanceOf[BSONObject]
+        } 
+        val metaObj = new BasicBSONObject()
+        metaObj.put ("$Meta", _metaObj)
+        
+        // perform query by dataBlocks
+        dbCursor = Option(cl.query (
+            SequoiadbReader.queryPartition(filters),
+            SequoiadbReader.selectFields(requiredColumns),
+            null,
+            metaObj))
+
+      }
+      else if (sdbPartition.scanType.equals(SequoiadbConfig.scanTypeExplain)){
+        // perform query by subCollection
+        dbCursor = Option(cl.query (
+            SequoiadbReader.queryPartition(filters),
+            SequoiadbReader.selectFields(requiredColumns),
+            null,
+            null))
+
+        
+      }
+      else {
+      }
+//      out.close
     }
     catch {
       case ex: Exception =>
@@ -202,4 +234,5 @@ object SequoiadbReader {
     fields.map { res.put ( _, null ) }
     res
   }
+  
 }

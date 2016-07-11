@@ -28,6 +28,9 @@ package com.sequoiadb.spark.partitioner
  * 20150305 Tao Wang           Initial Draft
  */
 import org.apache.spark.Partition
+import org.bson.BSONObject
+import org.bson.BasicBSONObject
+import org.bson.types.BasicBSONList
 
 /**
  * A SequoiaDB Partition is a minimum unit of repeatable-read operation
@@ -37,8 +40,11 @@ import org.apache.spark.Partition
  * @param index Partition index
  * @param hosts Hosts that hold partition data
  * @param collection The collection need to read for such partition
+ * @param metaObjStr When query by table scan, will be used
  */
 case class SequoiadbPartition(
   index: Int,
+  scanType: Int,
   hosts: Seq[SequoiadbHost],
-  collection: SequoiadbCollection) extends Partition
+  collection: SequoiadbCollection,
+  metaObjStr: Option[String]) extends Partition

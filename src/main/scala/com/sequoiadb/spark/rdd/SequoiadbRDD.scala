@@ -1,13 +1,16 @@
 package com.sequoiadb.spark.rdd
 
 import org.apache.spark.SparkContext
-import com.sequoiadb.spark.SequoiadbConfig
+import _root_.com.sequoiadb.spark.SequoiadbConfig
 import com.sequoiadb.spark.partitioner._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.sources.Filter
 import org.apache.spark.{Partition, TaskContext}
 import org.bson.BSONObject
+import org.slf4j.{Logger, LoggerFactory}
+//import java.io.FileOutputStream;  
+
 /**
  * Source File Name = SequoiadbRDD.scala
  * Description      = SequoiaDB RDD
@@ -34,22 +37,28 @@ class SequoiadbRDD(
   extends RDD[BSONObject](sc, deps = Nil) {
 
 
-  override def getPartitions: Array[Partition] =
+  private var LOG: Logger = LoggerFactory.getLogger(this.getClass.getName())
+  override def getPartitions: Array[Partition] = {
     partitioner.getOrElse(new SequoiadbPartitioner(config)).computePartitions(
       filters).asInstanceOf[Array[Partition]]
+  }
 
-  override def getPreferredLocations(split: Partition): Seq[String] =
+  override def getPreferredLocations(split: Partition): Seq[String] = {
     split.asInstanceOf[SequoiadbPartition].hosts.map(_.getHost)
+    
+  }
 
   override def compute(
     split: Partition,
-    context: TaskContext): SequoiadbRDDIterator =
+    context: TaskContext): SequoiadbRDDIterator = {
+    LOG.info ("enter SequoiadbRDD.compute")
     new SequoiadbRDDIterator(
       context,
       split.asInstanceOf[SequoiadbPartition],
       config,
       requiredColumns,
       filters)
+  }
 
 }
 

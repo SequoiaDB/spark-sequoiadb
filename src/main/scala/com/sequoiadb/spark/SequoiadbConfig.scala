@@ -110,6 +110,8 @@ object SequoiadbConfig {
   val Username        = "username"
   val Password        = "password"
   val BulkSize        = 500
+  val scanTypeExplain = 0
+  val scanTypeGetQueryMeta = 1
 
   val all = List(
     Host,

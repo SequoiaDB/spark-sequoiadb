@@ -17,6 +17,7 @@
  */
 package com.sequoiadb.spark.partitioner
 
+
 /**
  * Source File Name = SequoiadbCollection.scala
  * Description      = Collection information SequoiaDB
@@ -27,6 +28,9 @@ package com.sequoiadb.spark.partitioner
  * ======== ================== ================================================
  * 20150305 Tao Wang           Initial Draft
  */
+
+
+import org.bson.types.BasicBSONList
 
 /**
  * SequoiaDB collection information
@@ -48,6 +52,6 @@ object SequoiadbCollection {
    */
   def apply ( collectionname: String ) = {
     val cl = collectionname.split('.')
-    new SequoiadbCollection(cl(0), if ( cl.length > 1 ) cl(1) else "" )
+    new SequoiadbCollection(cl(0), if ( cl.length > 1 ) cl(1) else "")
   }
 }
