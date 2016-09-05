@@ -128,7 +128,7 @@ object SequoiadbRowConverter extends JsonSupport
         }
         case (struct: StructType,value: GenericRow) =>
           rowAsDBObject(value,struct)
-        case (struct: DecimalType, value ) => value.asInstanceOf[Decimal].toDouble
+        case (struct: DecimalType, value ) => value.asInstanceOf[org.apache.spark.sql.types.Decimal].toDouble 
         case ( struct: TimestampType, value ) => {
           val time = value.asInstanceOf[Timestamp]
           new BSONTimestamp ( (time.getTime()/1000).toInt, (time.getTime()%1000).toInt*1000)
@@ -175,3 +175,4 @@ object SequoiadbRowConverter extends JsonSupport
   }
 
 }
+

@@ -38,6 +38,7 @@ with Matchers {
     private val username : String = "testusername"
     private val password : String = "testpassword"
     private val preference : String = "{PreferedInstance:\"M\"}"
+    private val scanType : String = "auto"
     
     "Config" should "be initialized successful" in {
       val testConfig = SequoiadbConfigBuilder()
@@ -48,6 +49,7 @@ with Matchers {
       .set(SequoiadbConfig.Username,"")
       .set(SequoiadbConfig.Password,"")
       .set(SequoiadbConfig.Preference,"")
+      .set(SequoiadbConfig.ScanType,"")
       .build()
     }
 
@@ -60,12 +62,14 @@ with Matchers {
       .set(SequoiadbConfig.Username,username)
       .set(SequoiadbConfig.Password,password)
       .set(SequoiadbConfig.Preference,"")
+      .set(SequoiadbConfig.ScanType,scanType)
       .build()
       testConfig.get[List[String]](SequoiadbConfig.Host).getOrElse("") should equal (List(host + ":" + port))
       testConfig.get[String](SequoiadbConfig.CollectionSpace).getOrElse("") should equal(collectionspace)
       testConfig.get[String](SequoiadbConfig.Collection).getOrElse("") should equal(collection)
       testConfig.get[Float](SequoiadbConfig.SamplingRatio).getOrElse("") should equal(1.0)
       testConfig.get[String](SequoiadbConfig.Preference).getOrElse("") should equal("")
+      testConfig.get[String](SequoiadbConfig.ScanType).getOrElse("") should equal(scanType)
     }
     
     it should "fails if any arguments not defined" in {
