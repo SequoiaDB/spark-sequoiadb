@@ -43,7 +43,7 @@ import org.bson.types.BasicBSONList
  * @param metaObjStr When query by table scan, will be used
  */
 case class SequoiadbPartition(
-  index: Int,
+  var index: Int,
   scanType: Int,
   hosts: Seq[SequoiadbHost],
   collection: SequoiadbCollection,

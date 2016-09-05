@@ -109,6 +109,7 @@ object SequoiadbConfig {
   val Preference      = "preference"
   val Username        = "username"
   val Password        = "password"
+  val ScanType        = "scanType"    // auto/ixscan/tbscan
   val BulkSize        = 500
   val scanTypeExplain = 0
   val scanTypeGetQueryMeta = 1
@@ -120,7 +121,8 @@ object SequoiadbConfig {
     SamplingRatio,
     Preference,
     Username,
-    Password)
+    Password,
+    ScanType)
 
   //  Default values
 
@@ -129,8 +131,10 @@ object SequoiadbConfig {
   val DefaultPort = "11810"
   val DefaultUsername = ""
   val DefaultPassword = ""
+  val DefaultScanType = "auto"
 
   val Defaults = Map(
     SamplingRatio -> DefaultSamplingRatio,
-    Preference -> DefaultPreference)
+    Preference -> DefaultPreference,
+    ScanType -> DefaultScanType)
 }

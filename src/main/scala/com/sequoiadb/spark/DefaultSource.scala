@@ -75,6 +75,8 @@ class DefaultSource extends RelationProvider with SchemaRelationProvider with Cr
     val password = parameters.getOrElse(Password, DefaultPassword)
     
     val preference = parameters.getOrElse(Preference, DefaultPreference)
+    
+    val scanType = parameters.getOrElse(ScanType, DefaultScanType)
 
     SequoiadbConfigBuilder()
         .set(Host,host)
@@ -83,7 +85,8 @@ class DefaultSource extends RelationProvider with SchemaRelationProvider with Cr
         .set(SamplingRatio,samplingRatio)
         .set(Username,username)
         .set(Password,password)
-        .set(Preference,preference).build()
+        .set(Preference,preference)
+        .set(ScanType, scanType).build()
   }
   
   /**

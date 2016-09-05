@@ -188,7 +188,7 @@ trait JsonSupport {
   }
   
   private def toDate(value: Any) : Date = {
-    new Date(toTimestamp(value).getTime)
+    new java.sql.Date(toTimestamp(value).getTime)
   }
 
   private def toInt(value: Any): Int = {

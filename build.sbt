@@ -4,9 +4,11 @@ version := "1.12"
 
 organization := "com.sequoiadb"
 
-crossScalaVersions := Seq ( "2.10.4", "2.11.0" )
 
 libraryDependencies += "com.sequoiadb" % "sequoiadb-driver" % "1.12"
+
+
+scalaVersion := "2.11.8"
 
 resolvers ++= Seq(
   "Apache Staging" at "https://repository.apache.org/content/repositories/staging/",
@@ -20,7 +22,7 @@ resolvers += "Spark Package Main Repo" at "https://dl.bintray.com/spark-packages
 
 spName := "SequoiaDB/spark-sequoiadb"
 
-sparkVersion := "1.6.1"
+sparkVersion := "2.0.0"
 
 sparkComponents ++= Seq("sql")
 
@@ -48,7 +50,7 @@ pomExtra := (
     </developer>
   </developers>)
 
-libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.1" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 
 credentials += Credentials(Path.userHome / ".ivy2" / ".sbtcredentials")
 

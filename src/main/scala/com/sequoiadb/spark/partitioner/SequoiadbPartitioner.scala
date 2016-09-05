@@ -46,8 +46,10 @@ import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.HashMap
 import org.apache.spark.sql.sources.Filter
 import scala.collection.mutable.Set
-import com.sequoiadb.base.DBCollection;
+import com.sequoiadb.base.DBCollection
 import org.slf4j.{Logger, LoggerFactory}
+import org.bson.util.JSON
+import sun.security.util.Cache.EqualByteArray
 //import java.io.FileOutputStream;  
 
 
@@ -222,7 +224,7 @@ class SequoiadbPartitioner(
     var ds : Option[SequoiadbDatasource] = None
     var connection : Option[Sequoiadb] = None
     val partition_list: ArrayBuffer[SequoiadbPartition] = ArrayBuffer[SequoiadbPartition]()
-    val collectionSet :  Set [String] = scala.collection.mutable.Set ()
+    val collectionSet:  Set [String] = scala.collection.mutable.Set ()
     
     try {
       // TODO: need to close ds afterwards
@@ -273,7 +275,8 @@ class SequoiadbPartitioner(
       def getQueryMetaObj (clObject: DBCollection, queryObj: BSONObject): Array[BSONObject] = {
         val bson_list: ArrayBuffer[BSONObject] = ArrayBuffer[BSONObject]()
        
-        val cursor = clObject.getQueryMeta(queryObj, null, null, 0, 0, 0)
+//        val cursor = clObject.getQueryMeta(queryObj, null, null, 0, 0, 0)
+        val cursor = clObject.getQueryMeta(null, null, null, 0, 0, 0)
         while (cursor.hasNext) {
           val tmp = SequoiadbRowConverter.dbObjectToMap(cursor.getNext)
           for (block <- SequoiadbRowConverter.dbObjectToMap(tmp("Datablocks").asInstanceOf[BasicBSONList])){
@@ -360,7 +363,7 @@ class SequoiadbPartitioner(
               queryObj,
               null, null, null,
               DBQuery.FLG_QUERY_EXPLAIN )
-      
+      LOG.info ("queryObj = " + queryObj.toString)
       var breakValue = true
       while ( cursor.hasNext && breakValue ) {
         // note each row represent a group
@@ -370,7 +373,6 @@ class SequoiadbPartitioner(
           for ( collection <- SequoiadbRowConverter.dbObjectToMap(
             row("SubCollections").asInstanceOf[BasicBSONList]) ) {
             // get the collection name
-//           collectionSet.add (collection._2.asInstanceOf[BSONObject].get("Name").asInstanceOf[String])
             scanType = Option(collection._2.asInstanceOf[BSONObject].get("ScanType").asInstanceOf[String])
             breakValue = false
           }
@@ -381,20 +383,41 @@ class SequoiadbPartitioner(
         }
       }
       cursor.close
-      // this query is table scan, then get SDB data by getQueryMeta
-      if ( scanType.get.equals("tbscan")) {
-        LOG.info ("This query is table scan, then get SDB data by getQueryMeta")
-        partition_list = Option(computePartitionsByGetQueryMeta (queryObj))
+      
+      val checkScanType = config[String](SequoiadbConfig.ScanType)
+      if (!checkScanType.equalsIgnoreCase("ixscan") &&
+          !checkScanType.equalsIgnoreCase("tbscan") &&
+          !checkScanType.equalsIgnoreCase("auto")) {
+        LOG.info ("Config's scanType = " + checkScanType + ", we will set scanType = auto")
       }
-      // this query is index scan, then get SDB data by explain
-      else if (scanType.get.equals("ixscan")) { 
+      else {
+        LOG.info ("Config's scanType = " + checkScanType)
+      }
+      if (checkScanType.equalsIgnoreCase("ixscan")) {
         LOG.info ("This query is index scan, then get SDB data by explain")
         partition_list = Option(computePartitionsByExplain (queryObj))
       }
-      // scanType is unknow
-      else {
-        LOG.error ("scanType is unknow, scanType = " + scanType.get)
+      else if (checkScanType.equalsIgnoreCase("tbscan")) {
+        LOG.info ("This query is table scan, then get SDB data by getQueryMeta")
+        partition_list = Option(computePartitionsByGetQueryMeta (queryObj))
       }
+      else {
+        // this query is table scan, then get SDB data by getQueryMeta
+        if ( scanType.get.equals("tbscan")) {
+          LOG.info ("This query is table scan, then get SDB data by getQueryMeta")
+          partition_list = Option(computePartitionsByGetQueryMeta (queryObj))
+        }
+        // this query is index scan, then get SDB data by explain
+        else if (scanType.get.equals("ixscan")) { 
+          LOG.info ("This query is index scan, then get SDB data by explain")
+          partition_list = Option(computePartitionsByExplain (queryObj))
+        }
+        // scanType is unknow
+        else {
+          LOG.error ("scanType is unknow, scanType = " + scanType.get)
+        }
+      }
+      
       
     } catch {
       case ex: Exception =>
@@ -407,6 +430,325 @@ class SequoiadbPartitioner(
         connectionpool.close
       } // ds.fold(ifEmpty=())
     } // finally
+    
+    def getConnInfo (partition_list: Array[SequoiadbPartition]):String = {
+      val tmpPartitionArr: ArrayBuffer [String] = ArrayBuffer [String] ()
+      
+      for (partition <- partition_list) {
+        val hostStr = partition.hosts.get(0).getHost
+        val serviceStr = partition.hosts.get(0).getService
+        if (partition.scanType.equals(SequoiadbConfig.scanTypeGetQueryMeta)) {
+          val _metaObjStr = partition.metaObjStr.get
+          val _metaObj = JSON.parse (_metaObjStr).asInstanceOf[BSONObject]
+          val metaNum = _metaObj.get ("Datablocks").asInstanceOf[BasicBSONList].get(0).asInstanceOf[Int]
+          tmpPartitionArr += hostStr + ":" + serviceStr + ":" + metaNum
+        }
+        else {
+          tmpPartitionArr += hostStr + ":" + serviceStr
+        }
+      }
+      tmpPartitionArr.toString
+    }
+    LOG.info ("partition seq before, partition_list = " + getConnInfo (partition_list.get))
+    partition_list = seqPartitionList (partition_list)
+    LOG.info ("partition seq over, partition_list = " + getConnInfo (partition_list.get))
     partition_list.get
+  }
+  
+  
+  /**
+   * Sequence partition_list
+   * @param _partition_list
+   */
+  private def seqPartitionList (tmp_partition_list: Option[Array[SequoiadbPartition]]): Option[Array[SequoiadbPartition]] = {
+    val partition_list: ArrayBuffer[SequoiadbPartition] = ArrayBuffer[SequoiadbPartition]()
+    val hostSet:  Set [String] = scala.collection.mutable.Set ()
+    val haveReadHostSet:  Set [String] = scala.collection.mutable.Set ()
+    val serviceSet:  Set [String] = scala.collection.mutable.Set ()
+//    val hostArr = ArrayBuffer[ArrayBuffer[String]]()
+
+    val tmpHostMap = scala.collection.mutable.Map[String, ArrayBuffer[scala.collection.mutable.Map[String, SequoiadbPartition]]]()    
+    
+    if (tmp_partition_list == None){
+      return tmp_partition_list
+    }
+    for (partition <- tmp_partition_list.get){
+      val hostStr = partition.hosts.get(0).getHost.toString
+      val serviceStr = partition.hosts.get(0).getService.toString
+      hostSet.add (hostStr)
+      serviceSet.add (serviceStr)
+      
+      val serviceMap = scala.collection.mutable.Map[String, SequoiadbPartition] ()
+      serviceMap.put (serviceStr, partition)
+        
+      // tmpHostMap do not have (hostStr, Any) Map
+      if (tmpHostMap.get(hostStr) == None) {
+        val serviceArr = ArrayBuffer[scala.collection.mutable.Map[String, SequoiadbPartition]] ()
+        serviceArr += serviceMap
+        tmpHostMap.put (hostStr, serviceArr)  
+      } 
+      // tmpHostMap has the (hostStr, Any) Map
+      else {
+        val serviceArr = tmpHostMap.get(hostStr).get
+        serviceArr += serviceMap
+        tmpHostMap.put (hostStr, serviceArr)  
+      }
+    } 
+    
+    // because after sequence Partition List, you need to set Partition number to 0 ~ N
+    def initPartitionList_index_number (partitions: Option[ArrayBuffer[SequoiadbPartition]]): Option[ArrayBuffer[SequoiadbPartition]] = {
+      if (partitions == None) {
+        return None
+      }
+      val _partitionList = partitions.get
+      val partition_list: ArrayBuffer[SequoiadbPartition] = ArrayBuffer[SequoiadbPartition]()
+    
+      var index_number = 0
+      for (partition <- _partitionList) {
+        partition.index = index_number
+        partition_list += partition
+        index_number = index_number + 1
+      }
+      return Option (partition_list)
+    }
+    // get the Map's key string value
+    def getKey (inputMap: scala.collection.mutable.Map[String, SequoiadbPartition]): String = {
+      val keySet = inputMap.keySet
+      var key: String = null 
+      for (_key <- keySet){
+        key = _key
+      }
+      return key
+    }
+      
+    // init hostMap's serviceMap value
+    def initServiceMap ( serviceArrSort: ArrayBuffer[scala.collection.mutable.Map[String, SequoiadbPartition]]
+    ): scala.collection.mutable.Map[String, ArrayBuffer[SequoiadbPartition]] = {
+      val serviceMap = scala.collection.mutable.Map[String,  ArrayBuffer[SequoiadbPartition]]()
+      for (tmpServiceMap <- serviceArrSort) {
+        val serviceStr = getKey (tmpServiceMap).toString()
+        val partition = tmpServiceMap.get (serviceStr).get
+        
+        if (serviceMap.get (serviceStr) == None) {
+          val serviceArr = ArrayBuffer[SequoiadbPartition] ()
+          serviceArr += partition
+          serviceMap.put (serviceStr, serviceArr)
+        } else {
+          val serviceArr = serviceMap.get (serviceStr).get
+          serviceArr += partition
+          serviceMap.put (serviceStr, serviceArr)
+        }
+      }
+      serviceMap
+    }
+    
+      
+    val hostMap = scala.collection.mutable.Map[String, scala.collection.mutable.Map[String, ArrayBuffer[SequoiadbPartition]]]()
+  
+    for (serviceObj <- tmpHostMap){
+      val serviceArr = serviceObj._2
+      val hostStr = serviceObj._1
+      
+//      val serviceArrSort = serviceArr.sortWith((t1, t2) => getKey(t1).asInstanceOf[String] < getKey(t2).asInstanceOf[String].asInstanceOf[String])
+      // put partition to hostMap 
+//      hostMap.put (hostStr, initServiceMap (serviceArrSort))
+      hostMap.put (hostStr, initServiceMap (serviceArr))
+    }
+      
+    def ArrHasValue (hostMap: scala.collection.mutable.Map[String, scala.collection.mutable.Map[String, ArrayBuffer[SequoiadbPartition]]]): Boolean = {
+      var i = 0
+      for (value <- hostMap) {
+        i += 1
+        return true 
+      }
+      
+      if (i == 0){
+        return false
+      }
+      false
+    }
+      
+    
+    def checkHostSetIsIn (haveReadHostSet:  scala.collection.mutable.Set [String], newHost: String): Boolean = {
+      for (_host <- haveReadHostSet) {
+        if (! _host.equals (newHost)) {
+          return true
+        }
+      }
+      return false
+    }
+      
+    def getPartition (hostMap: scala.collection.mutable.Map[String, scala.collection.mutable.Map[String, ArrayBuffer[SequoiadbPartition]]], oldPartition: SequoiadbPartition): Option[SequoiadbPartition]= {
+      if (oldPartition == None) {
+         return None
+      }
+      val oldHOST = oldPartition.hosts.get(0)
+      val oldH = oldHOST.getHost.toString
+      val oldS = oldHOST.getService.toString
+      for (mapObj <- hostMap){
+        val host = mapObj._1
+        val serviceMap = mapObj._2
+        if (!host.equals(oldH)) {
+          for (serviceObj <- serviceMap) {
+            val service = serviceObj._1
+            val partitionArr = serviceObj._2.asInstanceOf [ArrayBuffer[SequoiadbPartition]]
+            if (!service.equals(oldS)) {
+              for (partition <- partitionArr) {
+                if (!checkHostSetIsIn (haveReadHostSet, host)) {
+                  haveReadHostSet.add (host)
+                  if (haveReadHostSet.equals(hostSet)) {
+                    haveReadHostSet.clear ()
+                  }
+                  
+                  return Option (partition)
+                }
+              }
+            }
+          }
+        }
+      }
+      return getFirstPartition (hostMap)
+    }
+      
+    def getMetaNum (partition: SequoiadbPartition): Int = {
+      
+      if (partition.scanType.equals(SequoiadbConfig.scanTypeGetQueryMeta)){        
+        if (partition.metaObjStr != None){
+          val _metaObjStr = partition.metaObjStr.get
+          val _metaObj = JSON.parse (_metaObjStr).asInstanceOf[BSONObject]
+          val metaNum = _metaObj.get ("Datablocks").asInstanceOf[BasicBSONList].get(0).asInstanceOf[Int]
+          return metaNum
+        }
+      }
+      -1
+    }
+      
+    def dropPartition (oldPartition: SequoiadbPartition, hostMap: scala.collection.mutable.Map[String, scala.collection.mutable.Map[String, ArrayBuffer[SequoiadbPartition]]]): Option[scala.collection.mutable.Map[String, scala.collection.mutable.Map[String, ArrayBuffer[SequoiadbPartition]]]] = {
+      val oldHOST = oldPartition.hosts.get(0)
+      val oldH = oldHOST.getHost.toString
+      val oldS = oldHOST.getService.toString
+      val oldCollectionObj = oldPartition.collection
+      val oldCsName = oldCollectionObj.collectionspace
+      val oldClName = oldCollectionObj.collection
+      val oldCollectionName = oldCollectionObj.collectionname
+      val oldMetaNum = getMetaNum (oldPartition)
+      
+      var removePartition = false
+
+      val _hostMap = hostMap
+      
+      for (mapObj <- hostMap){
+        val host = mapObj._1
+        val serviceMap = mapObj._2
+        val _serviceMap = serviceMap
+        if (host.equals(oldH)) {
+          for (serviceObj <- serviceMap) {
+            val service = serviceObj._1
+            val partitionArr = serviceObj._2.asInstanceOf [ArrayBuffer[SequoiadbPartition]]
+            val _partitionArr = partitionArr
+            if (service.equals(oldS)) {
+              var i = 0
+              for (partition <- partitionArr) {
+                val newCollectionObj = partition.collection
+                val newCsName = newCollectionObj.collectionspace
+                val newClName = newCollectionObj.collection
+                val newCollectionName = newCollectionObj.collectionname
+                if (newCollectionName.equals(oldCollectionName)) {
+                  // this partition's scanType is DataBlocks
+                  if (partition.scanType.equals(SequoiadbConfig.scanTypeGetQueryMeta)){ 
+                    val newMetaNum = getMetaNum (partition) 
+                    if ( newMetaNum == oldMetaNum ) {
+                      _partitionArr.remove(i)
+                      removePartition = true
+                    }
+                  }
+                  // this partition's scalType is IndexScan
+                  else {
+                    _partitionArr.remove(i)
+                    removePartition = true
+                  }
+                  
+                  
+                  if (removePartition) {
+                    
+                    if (_partitionArr.length == 0) {
+                      _serviceMap.remove(service)
+                      if (_serviceMap.isEmpty) {
+                        _hostMap.remove(host)
+                      }
+                      else {
+                        _hostMap.put (host, _serviceMap)
+                      }
+                    }
+                    else {
+                      _serviceMap.put (service, _partitionArr)
+                      _hostMap.put (host, _serviceMap)
+                    }
+                    return Option (_hostMap)
+                  }
+                        
+                }
+                i += 1
+              }
+            }
+          }
+        }
+      }
+      return Option(_hostMap)
+    }
+      
+    def getFirstPartition (hostMap: scala.collection.mutable.Map[String, scala.collection.mutable.Map[String, ArrayBuffer[SequoiadbPartition]]]
+    ): Option[SequoiadbPartition] = {
+      for (hostObj <- hostMap) {
+        val serviceMap = hostObj._2
+        for (serviceObj <- serviceMap) {
+          val partitionArr = serviceObj._2
+          for (partition <- partitionArr) {
+            return Option(partition)
+          }
+        }
+      }
+      return None
+    }
+      
+    var breakValue2 = false
+    var first2 = true
+    var partition2: SequoiadbPartition = null
+    var tmpHostMap2 = hostMap
+    while (true && ! breakValue2) {
+      if (ArrHasValue (tmpHostMap2)) {
+        if (first2) {
+          partition2 = getFirstPartition (tmpHostMap2).get
+          if (Option (partition2) != None) {
+            partition_list += partition2
+            first2 = false
+          }
+          else {
+            breakValue2 = true
+          }
+        }
+        else {
+          partition2 = getPartition (tmpHostMap2, partition2).get
+          if (Option (partition2) != None) {
+            partition_list += partition2
+          }
+          else {
+            breakValue2 = true
+          }
+        }
+        if (Option (partition2) != None) {
+          tmpHostMap2 = dropPartition (partition2, tmpHostMap2).get
+        }
+      } 
+      else {
+        breakValue2 = true
+      } // end if (ArrHasValue (tmpHostMap))
+              
+    }
+    
+    val partition_list_last = initPartitionList_index_number (Option (partition_list)).get
+    
+    return Option (partition_list_last.toArray)
+    
   }
 }
