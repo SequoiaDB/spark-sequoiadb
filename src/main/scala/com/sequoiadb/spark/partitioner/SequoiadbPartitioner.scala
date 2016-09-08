@@ -174,10 +174,7 @@ class SequoiadbPartitioner(
         val cursor = connection.get.getCollectionSpace(
           config[String](SequoiadbConfig.CollectionSpace)).getCollection(
             config[String](SequoiadbConfig.Collection)
-          ).query(
-            queryObj,
-            null, null, null,
-            DBQuery.FLG_QUERY_EXPLAIN )
+          ).explain (queryObj, null, null, null, 0, -1, 0, null)
         // loop for every fields in the explain result
         var partition_id = 0
         while ( cursor.hasNext ) {
@@ -245,10 +242,7 @@ class SequoiadbPartitioner(
             config[String](SequoiadbConfig.Collection)
           )
           
-      val cursor = collection.query(
-                                      queryObj,
-                                      null, null, null,
-                                      DBQuery.FLG_QUERY_EXPLAIN )
+      val cursor = collection.explain (queryObj, null, null, null, 0, -1, 0, null)
       // get all collection's name
       while ( cursor.hasNext ) {
         // note each row represent a group
@@ -359,10 +353,7 @@ class SequoiadbPartitioner(
       val cursor = connection.get.getCollectionSpace(
           config[String](SequoiadbConfig.CollectionSpace)).getCollection(
             config[String](SequoiadbConfig.Collection)
-          ).query(
-              queryObj,
-              null, null, null,
-              DBQuery.FLG_QUERY_EXPLAIN )
+          ).explain (queryObj, null, null, null, 0, -1, 0, null)
       LOG.info ("queryObj = " + queryObj.toString)
       var breakValue = true
       while ( cursor.hasNext && breakValue ) {
@@ -752,3 +743,4 @@ class SequoiadbPartitioner(
     
   }
 }
+
