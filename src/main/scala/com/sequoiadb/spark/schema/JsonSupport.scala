@@ -50,8 +50,10 @@ import java.sql.Date
 import org.bson.types.BSONTimestamp
 import org.bson.types.Binary
 import org.bson.types.ObjectId
-import java.text.SimpleDateFormat;
+import java.text.SimpleDateFormat
 import com.sequoiadb.spark.util.ByteUtil
+import org.slf4j.{Logger, LoggerFactory}
+import org.bson.types.BSONDecimal
 
 /**
  * Json - Scala object transformation support.
@@ -61,6 +63,7 @@ import com.sequoiadb.spark.util.ByteUtil
  */
 trait JsonSupport {
 
+  private var LOG: Logger = LoggerFactory.getLogger(this.getClass.getName())
   /**
    * Tries to convert some scala value to another compatible given type
    * @param value Value to be converted
@@ -78,7 +81,7 @@ trait JsonSupport {
           case IntegerType => toInt(value)
           case LongType => toLong(value)
           case DoubleType => toDouble(value)
-          case DecimalType() => toDecimal(value)
+          case DecimalType() => toDecimal(value, desiredType.asInstanceOf[DecimalType])
           case BooleanType => toBoolean(value)
           case NullType => null
           case TimestampType => toTimestamp(value)
@@ -120,6 +123,7 @@ trait JsonSupport {
       case value: BSONTimestamp=>value.getTime().toShort
       case value: java.util.Date=>value.getTime().toShort
       case value: String => value.toShort
+      case value: BSONDecimal=>value.toBigDecimal.doubleValue.toShort
       case _ => 0
     }
   }
@@ -135,6 +139,7 @@ trait JsonSupport {
       case value: java.lang.Boolean => value
       case value: java.math.BigInteger => if ( value == 0 ) false else true
       case value: java.math.BigDecimal => if ( value == 0 ) false else true
+      case value: BSONDecimal=>if (value.toBigDecimal().intValue == 0) false else true
       case _ => false
     }
   }
@@ -153,6 +158,7 @@ trait JsonSupport {
       case value: BSONTimestamp=>value.getTime().toByte
       case value: java.util.Date=>value.getTime().toByte
       case value: String => value.toByte
+      case value: BSONDecimal=>value.toString.toByte
       case _ => 0
     }
   }
@@ -171,6 +177,7 @@ trait JsonSupport {
       case value: BSONTimestamp=>value.getTime().toFloat
       case value: java.util.Date=>value.getTime().toFloat
       case value: String => value.toFloat
+      case value: BSONDecimal=>value.toBigDecimal().floatValue()
       case _ => 0
     }
   }
@@ -183,6 +190,7 @@ trait JsonSupport {
       case value: java.util.Date=>new Timestamp(value.getTime())
       case value: String=> new Timestamp((new SimpleDateFormat(
           "yyyy-MM-dd.HH:mm:ss")).parse(value).getTime())
+      case value: BSONDecimal=>new Timestamp (value.toBigDecimal.longValue)
       case _ => new Timestamp(0)
     }
   }
@@ -205,6 +213,7 @@ trait JsonSupport {
       case value: BSONTimestamp=>value.getTime().toInt
       case value: java.util.Date=>value.getTime().toInt
       case value: String => value.toInt
+      case value: BSONDecimal=>value.toBigDecimal().intValue
       case _ => 0
     }
   }
@@ -223,6 +232,7 @@ trait JsonSupport {
       case value: BSONTimestamp=>value.getTime().toLong
       case value: java.util.Date=>value.getTime().toLong
       case value: String => value.toLong
+      case value: BSONDecimal=>value.toBigDecimal.longValue
       case _ => 0
     }
   }
@@ -241,11 +251,12 @@ trait JsonSupport {
       case value: BSONTimestamp=>value.getTime().toDouble
       case value: java.util.Date=>value.getTime().toDouble
       case value: String => value.toDouble
+      case value: BSONDecimal=>value.toBigDecimal.doubleValue
       case _ => 0
     }
   }
 
-  private def toDecimal(value: Any): Decimal = {
+  private def toDecimal(value: Any, struct: DecimalType): Decimal = {
     value match {
       case value: java.lang.Integer => Decimal(value)
       case value: java.lang.Long => Decimal(value)
@@ -254,11 +265,16 @@ trait JsonSupport {
       case value: java.lang.Short => Decimal(value.toInt)
       case value: java.lang.Byte => Decimal(value.toInt)
       case value: java.lang.Boolean => if ( value == false ) Decimal(0) else Decimal(1)
-      case value: java.math.BigInteger => Decimal(new java.math.BigDecimal(value))
+      case value: java.math.BigInteger => Decimal(value.intValue)
       case value: java.math.BigDecimal => Decimal(value)
       case value: BSONTimestamp=>Decimal(value.getTime().toLong)
       case value: java.util.Date=>Decimal(value.getTime().toLong)
       case value: String => Decimal(value)
+      case value: BSONDecimal=>Decimal(
+          new scala.math.BigDecimal (
+              new java.math.BigDecimal (value.getValue)
+              ),
+              struct.precision, struct.scale);
       case _ => Decimal(0)
     }
   }
@@ -279,6 +295,7 @@ trait JsonSupport {
       case value: String => ByteUtil.getBytes(value)
       case value: Binary => value.getData
       case value: ObjectId => value.toByteArray()
+      case value: BSONDecimal=>ByteUtil.getBytes(value.getValue)
       case _ => Array[Byte]()
     }
   }
@@ -323,4 +340,5 @@ trait JsonSupport {
   }
 
 }
+
 

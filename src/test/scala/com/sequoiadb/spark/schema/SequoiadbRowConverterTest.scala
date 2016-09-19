@@ -31,6 +31,7 @@ import org.scalatest.{FlatSpec, Matchers}
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConverters._
 import scala.collection.JavaConversions._
+import org.bson.types.BSONDecimal
 /**
  * @author sequoiadb
  */
@@ -93,14 +94,32 @@ with Matchers{
             )
           ), true) :: Nil)
 
+  def replaceDecimalValueType(row: Row, schema: StructType): Row = {
+    val values: Seq[Any] = schema.fields.zipWithIndex.map {
+       case (att, idx) => {
+         att.dataType match {
+           case DecimalType() => new java.math.BigDecimal (
+               row(idx).asInstanceOf[org.apache.spark.sql.types.Decimal].toString()
+               )
+           case _ => row(idx)
+         }
+     }
+    }
+    Row.fromSeq(values)
+  }
+  
   "Normal schema" should "be able to handle normal data" in {
     val primitivedata : BSONObject = JSON.parse( TestJsonData.primitiveObject ).asInstanceOf[BSONObject]
+
+    
     val result : BSONObject = SequoiadbRowConverter.rowAsDBObject(
-        SequoiadbRowConverter.recordAsRow(
-          SequoiadbRowConverter.dbObjectToMap(primitivedata),
+        replaceDecimalValueType (
+              SequoiadbRowConverter.recordAsRow(
+            SequoiadbRowConverter.dbObjectToMap(primitivedata),
+            primitiveSchema), 
           primitiveSchema),
         primitiveSchema)
-    result.get("decimal") should equal (primitivedata.get("decimal"))
+    result.get("decimal").asInstanceOf[BSONDecimal].toBigDecimal().doubleValue should equal (primitivedata.get("decimal"))
     result.get("boolean") should equal (primitivedata.get("boolean"))
     // float and double type conversion cannot make direct comparison
     result.get("float").toString should equal (primitivedata.get("float").toString)
@@ -121,11 +140,13 @@ with Matchers{
   "Embed schema" should "be able to handle embed data" in {
     val embeddata : BSONObject = JSON.parse( TestJsonData.embedObject ).asInstanceOf[BSONObject]
     val result : BSONObject = SequoiadbRowConverter.rowAsDBObject(
-        SequoiadbRowConverter.recordAsRow(
-          SequoiadbRowConverter.dbObjectToMap(embeddata),
+        replaceDecimalValueType (
+          SequoiadbRowConverter.recordAsRow(
+            SequoiadbRowConverter.dbObjectToMap(embeddata),
+            embedSchema),
           embedSchema),
         embedSchema)
-    result.get("firstDecimal") should equal (embeddata.get("firstDecimal"))
+    result.get("firstDecimal").asInstanceOf[BSONDecimal].toBigDecimal().doubleValue should equal (embeddata.get("firstDecimal"))
     result.get("firstString") should equal (embeddata.get("firstString"))
     result.get("firstObject") should equal ( embeddata.get("firstObject"))
     result.get("firstArray") should equal ( embeddata.get("firstArray"))
