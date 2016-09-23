@@ -350,11 +350,12 @@ class SequoiadbPartitioner(
       connection.get.setSessionAttr(
           ConnectionUtil.getPreferenceObj(config[String](SequoiadbConfig.Preference)))   
 
+      LOG.info ("queryObj = " + queryObj.toString)
       val cursor = connection.get.getCollectionSpace(
           config[String](SequoiadbConfig.CollectionSpace)).getCollection(
             config[String](SequoiadbConfig.Collection)
           ).explain (queryObj, null, null, null, 0, -1, 0, null)
-      LOG.info ("queryObj = " + queryObj.toString)
+      
       var breakValue = true
       while ( cursor.hasNext && breakValue ) {
         // note each row represent a group
@@ -440,9 +441,9 @@ class SequoiadbPartitioner(
       }
       tmpPartitionArr.toString
     }
-    LOG.info ("partition seq before, partition_list = " + getConnInfo (partition_list.get))
+//    LOG.debug ("partition seq before, partition_list = " + getConnInfo (partition_list.get))
     partition_list = seqPartitionList (partition_list)
-    LOG.info ("partition seq over, partition_list = " + getConnInfo (partition_list.get))
+//    LOG.debug ("partition seq over, partition_list = " + getConnInfo (partition_list.get))
     partition_list.get
   }
   
