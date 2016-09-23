@@ -56,6 +56,8 @@ import org.bson.types.BSONTimestamp
 import org.bson.types.Binary
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
+import org.slf4j.{Logger, LoggerFactory}
+import org.bson.types.BSONDecimal
 
 /**
  * SequoiadbRowConverter support RDD transformations
@@ -64,6 +66,7 @@ import scala.collection.mutable.ArrayBuffer
 object SequoiadbRowConverter extends JsonSupport
   with Serializable {
 
+  private var LOG: Logger = LoggerFactory.getLogger(this.getClass.getName())
   /**
    *
    * @param schema RDD native schema
@@ -128,7 +131,9 @@ object SequoiadbRowConverter extends JsonSupport
         }
         case (struct: StructType,value: GenericRow) =>
           rowAsDBObject(value,struct)
-        case (struct: DecimalType, value ) => value.asInstanceOf[org.apache.spark.sql.types.Decimal].toDouble 
+        case (struct: DecimalType, value ) => {       
+          new BSONDecimal (value.asInstanceOf[java.math.BigDecimal].toString(), struct.precision, struct.scale)
+        }
         case ( struct: TimestampType, value ) => {
           val time = value.asInstanceOf[Timestamp]
           new BSONTimestamp ( (time.getTime()/1000).toInt, (time.getTime()%1000).toInt*1000)

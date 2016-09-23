@@ -1,11 +1,11 @@
 name := "spark-sequoiadb"
 
-version := "1.12"
+version := "2.6.0"
 
 organization := "com.sequoiadb"
 
 
-libraryDependencies += "com.sequoiadb" % "sequoiadb-driver" % "1.12"
+libraryDependencies += "com.sequoiadb" % "sequoiadb-driver" % "2.6.0"
 
 
 scalaVersion := "2.11.8"

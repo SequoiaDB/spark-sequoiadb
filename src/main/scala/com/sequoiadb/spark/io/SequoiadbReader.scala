@@ -42,6 +42,7 @@ import scala.collection.JavaConversions._
 import org.slf4j.{Logger, LoggerFactory}
 //import java.io.FileOutputStream  
 import org.bson.util.JSON
+import java.util.regex.Pattern
 
 /**
  *
@@ -219,6 +220,18 @@ object SequoiadbReader {
         val arr : BSONObject = new BasicBSONList
         arr.put ( "0", notCond )
         obj.put ( "$not",arr )
+      }
+      case StringStartsWith(attribute, value) =>{
+        val subobj: Pattern = Pattern.compile("^" + value,Pattern.CASE_INSENSITIVE);
+        obj.put (attribute,subobj)
+      }
+      case StringEndsWith(attribute, value) =>{
+        val subobj: Pattern = Pattern.compile(value + "$",Pattern.CASE_INSENSITIVE);
+        obj.put (attribute,subobj)
+      }
+      case StringContains(attribute, value) =>{
+        val subobj: Pattern = Pattern.compile(".*" + value + ".*",Pattern.CASE_INSENSITIVE);
+        obj.put (attribute,subobj)
       }
     }
     obj
