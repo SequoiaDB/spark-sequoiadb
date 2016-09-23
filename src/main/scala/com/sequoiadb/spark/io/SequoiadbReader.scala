@@ -43,6 +43,7 @@ import org.slf4j.{Logger, LoggerFactory}
 //import java.io.FileOutputStream  
 import org.bson.util.JSON
 import java.util.regex.Pattern
+import org.bson.types.BSONDecimal
 
 /**
  *
@@ -148,6 +149,7 @@ class SequoiadbReader(
 }
 
 object SequoiadbReader {
+  
   /**
    * Create query partition using given filters.
    *
@@ -155,37 +157,49 @@ object SequoiadbReader {
    * @return the query object
    */
   def queryPartition ( filters: Array[Filter]): BSONObject = {
+    
+    def changeJavaMathBigDecimalType (value: Any): Any = {
+      value match {
+        case value: java.math.BigDecimal => new BSONDecimal (value.asInstanceOf[java.math.BigDecimal].toString())
+        case _ => value
+      }
+    }
     val obj : BSONObject = new BasicBSONObject
     filters.foreach {
-      case EqualTo(attribute, value) => {
+      case EqualTo(attribute, _value) => {
         val subobj : BSONObject = new BasicBSONObject
+        val value = changeJavaMathBigDecimalType (_value)
         subobj.put("$et", value)
         obj.put(attribute,subobj)
       }
-      case GreaterThan(attribute, value) => {
+      case GreaterThan(attribute, _value) => {
         val subobj : BSONObject = new BasicBSONObject
+        val value = changeJavaMathBigDecimalType (_value)
         subobj.put("$gt", value)
         obj.put(attribute,subobj)
       }
-      case GreaterThanOrEqual(attribute, value) => {
+      case GreaterThanOrEqual(attribute, _value) => {
         val subobj : BSONObject = new BasicBSONObject
+        val value = changeJavaMathBigDecimalType (_value)
         subobj.put("$gte", value)
         obj.put(attribute,subobj)
       }
       case In(attribute, values) => {
         val subobj : BSONObject = new BasicBSONObject
         val arr : BSONObject = new BasicBSONList
-        Array.tabulate(values.length){ i => arr.put(""+i, values(i))}
+        Array.tabulate(values.length){ i => arr.put(""+i, changeJavaMathBigDecimalType (values(i)))}
         subobj.put("$in", arr)
         obj.put(attribute,subobj)
       }
-      case LessThan(attribute, value) => {
+      case LessThan(attribute, _value) => {
         val subobj : BSONObject = new BasicBSONObject
+        val value = changeJavaMathBigDecimalType (_value)
         subobj.put("$lt", value)
         obj.put(attribute,subobj)
       }
-      case LessThanOrEqual(attribute, value) => {
+      case LessThanOrEqual(attribute, _value) => {
         val subobj : BSONObject = new BasicBSONObject
+        val value = changeJavaMathBigDecimalType (_value)
         subobj.put("$lte", value)
         obj.put(attribute,subobj)
       }
@@ -221,15 +235,18 @@ object SequoiadbReader {
         arr.put ( "0", notCond )
         obj.put ( "$not",arr )
       }
-      case StringStartsWith(attribute, value) =>{
+      case StringStartsWith(attribute, _value) =>{
+        val value = changeJavaMathBigDecimalType (_value)
         val subobj: Pattern = Pattern.compile("^" + value,Pattern.CASE_INSENSITIVE);
         obj.put (attribute,subobj)
       }
-      case StringEndsWith(attribute, value) =>{
+      case StringEndsWith(attribute, _value) =>{
+        val value = changeJavaMathBigDecimalType (_value)
         val subobj: Pattern = Pattern.compile(value + "$",Pattern.CASE_INSENSITIVE);
         obj.put (attribute,subobj)
       }
-      case StringContains(attribute, value) =>{
+      case StringContains(attribute, _value) =>{
+        val value = changeJavaMathBigDecimalType (_value)
         val subobj: Pattern = Pattern.compile(".*" + value + ".*",Pattern.CASE_INSENSITIVE);
         obj.put (attribute,subobj)
       }
