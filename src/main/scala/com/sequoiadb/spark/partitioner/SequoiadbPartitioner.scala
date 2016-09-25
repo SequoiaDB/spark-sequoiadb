@@ -441,9 +441,9 @@ class SequoiadbPartitioner(
       }
       tmpPartitionArr.toString
     }
-//    LOG.debug ("partition seq before, partition_list = " + getConnInfo (partition_list.get))
+    LOG.debug ("partition seq before, partition_list = " + getConnInfo (partition_list.get))
     partition_list = seqPartitionList (partition_list)
-//    LOG.debug ("partition seq over, partition_list = " + getConnInfo (partition_list.get))
+    LOG.debug ("partition seq over, partition_list = " + getConnInfo (partition_list.get))
     partition_list.get
   }
   
@@ -457,6 +457,7 @@ class SequoiadbPartitioner(
     val hostSet:  Set [String] = scala.collection.mutable.Set ()
     val haveReadHostSet:  Set [String] = scala.collection.mutable.Set ()
     val serviceSet:  Set [String] = scala.collection.mutable.Set ()
+    
 //    val hostArr = ArrayBuffer[ArrayBuffer[String]]()
 
     val tmpHostMap = scala.collection.mutable.Map[String, ArrayBuffer[scala.collection.mutable.Map[String, SequoiadbPartition]]]()    
@@ -534,19 +535,51 @@ class SequoiadbPartitioner(
       serviceMap
     }
     
-      
     val hostMap = scala.collection.mutable.Map[String, scala.collection.mutable.Map[String, ArrayBuffer[SequoiadbPartition]]]()
   
     for (serviceObj <- tmpHostMap){
       val serviceArr = serviceObj._2
       val hostStr = serviceObj._1
-      
-//      val serviceArrSort = serviceArr.sortWith((t1, t2) => getKey(t1).asInstanceOf[String] < getKey(t2).asInstanceOf[String].asInstanceOf[String])
-      // put partition to hostMap 
-//      hostMap.put (hostStr, initServiceMap (serviceArrSort))
+
       hostMap.put (hostStr, initServiceMap (serviceArr))
     }
+    
+    def initHostTopology (hostMap: scala.collection.mutable.Map[String, scala.collection.mutable.Map[String, ArrayBuffer[SequoiadbPartition]]])
+      : scala.collection.mutable.Map[String, Set [String]] = {
+      val hostTopology: scala.collection.mutable.Map[String, Set [String]] = 
+      scala.collection.mutable.Map[String, scala.collection.mutable.Set[String]]()
       
+      for (tmpHostMap <- hostMap) {
+        val hostStr = tmpHostMap._1
+        val serviceMap = tmpHostMap._2
+        
+        val serviceSet:  Set [String] = scala.collection.mutable.Set ()
+        for (service <- serviceMap) {
+          val serviceStr = service._1
+          serviceSet.add (serviceStr)
+        }
+        hostTopology.put (hostStr, serviceSet)
+      }
+      return hostTopology
+    }
+    
+    
+    def initHaveReadHostTopology (hostMap: scala.collection.mutable.Map[String, scala.collection.mutable.Map[String, ArrayBuffer[SequoiadbPartition]]])
+      : scala.collection.mutable.Map[String, Set [String]] = {
+      val haveReadHostTopology: scala.collection.mutable.Map[String, Set [String]] = 
+        scala.collection.mutable.Map[String, scala.collection.mutable.Set[String]]()
+        
+        for (tmpHostMap <- hostMap) {
+          val hostStr = tmpHostMap._1
+          val serviceSet:  Set [String] = scala.collection.mutable.Set ()
+          haveReadHostTopology.put (hostStr, serviceSet)
+        }
+        return haveReadHostTopology
+    }
+    
+    val hostTopology = initHostTopology (hostMap)
+    val haveReadHostTopology = initHaveReadHostTopology (hostMap)
+    
     def ArrHasValue (hostMap: scala.collection.mutable.Map[String, scala.collection.mutable.Map[String, ArrayBuffer[SequoiadbPartition]]]): Boolean = {
       var i = 0
       for (value <- hostMap) {
@@ -559,47 +592,80 @@ class SequoiadbPartitioner(
       }
       false
     }
-      
     
-    def checkHostSetIsIn (haveReadHostSet:  scala.collection.mutable.Set [String], newHost: String): Boolean = {
-      for (_host <- haveReadHostSet) {
-        if (! _host.equals (newHost)) {
-          return true
-        }
+    def getPartitionNextHostStr (hostSet: Set [String], haveReadHostSet: Set [String])
+    : Option [String] = {
+      
+      val diffHostSeq = hostSet.filter { hostStr => {
+          !haveReadHostSet.exists { x => 
+            if (x.equals(hostStr)) true else false 
+          }
+        } 
       }
-      return false
+      
+      if (diffHostSeq.size != 0) {
+        return Option (diffHostSeq.head)
+      }
+      
+      return Option (hostSet.head)
+    }
+    
+    def getPartitionNextServiveStr (hostServiceSet: Set[String], haveReadHostServiceSet: Set[String])
+    : Option [String] = {
+      
+      val diffServiceSeq = hostServiceSet.filter { serviceStr => {
+          !haveReadHostServiceSet.exists { x => 
+            if (x.equals(serviceStr)) true else false 
+          }
+        } 
+      }
+      
+      if (diffServiceSeq.size != 0) {
+        return Option (diffServiceSeq.head)
+      }
+      
+      return Option (hostServiceSet.head)
+    }
+    
+    def getPartitionHostAndService (): String = {
+
+      val nextHostStr = getPartitionNextHostStr (hostSet, haveReadHostSet).get
+      
+      haveReadHostSet.add (nextHostStr)
+      
+      val haveReadHostServiceSet = haveReadHostTopology.get (nextHostStr).get
+      val hostServiceSet = hostTopology.get (nextHostStr).get
+      
+      val nextHostServiceStr = getPartitionNextServiveStr (hostServiceSet, haveReadHostServiceSet).get
+      
+      haveReadHostServiceSet.add (nextHostServiceStr)
+      
+      if (haveReadHostServiceSet.equals(hostServiceSet)) {
+        haveReadHostServiceSet.clear
+      }
+      haveReadHostTopology.put (nextHostStr, haveReadHostServiceSet)
+      
+      if (haveReadHostSet.equals(hostSet)) {
+        haveReadHostSet.clear
+      }
+      
+      return nextHostStr + "::" + nextHostServiceStr
     }
       
-    def getPartition (hostMap: scala.collection.mutable.Map[String, scala.collection.mutable.Map[String, ArrayBuffer[SequoiadbPartition]]], oldPartition: SequoiadbPartition): Option[SequoiadbPartition]= {
-      if (oldPartition == None) {
-         return None
-      }
-      val oldHOST = oldPartition.hosts.get(0)
-      val oldH = oldHOST.getHost.toString
-      val oldS = oldHOST.getService.toString
-      for (mapObj <- hostMap){
-        val host = mapObj._1
-        val serviceMap = mapObj._2
-        if (!host.equals(oldH)) {
-          for (serviceObj <- serviceMap) {
-            val service = serviceObj._1
-            val partitionArr = serviceObj._2.asInstanceOf [ArrayBuffer[SequoiadbPartition]]
-            if (!service.equals(oldS)) {
-              for (partition <- partitionArr) {
-                if (!checkHostSetIsIn (haveReadHostSet, host)) {
-                  haveReadHostSet.add (host)
-                  if (haveReadHostSet.equals(hostSet)) {
-                    haveReadHostSet.clear ()
-                  }
-                  
-                  return Option (partition)
-                }
-              }
-            }
-          }
-        }
-      }
-      return getFirstPartition (hostMap)
+    def getPartition (hostMap: scala.collection.mutable.Map[String, scala.collection.mutable.Map[String, ArrayBuffer[SequoiadbPartition]]]): Option[SequoiadbPartition]= {
+     
+      
+      val nextPartitionHostAndService = getPartitionHostAndService ()
+      val nextPartitionHostAndServiceArr = nextPartitionHostAndService.split("::")
+      val nextPartitionHostStr = nextPartitionHostAndServiceArr.apply(0)
+      val nextPartitionSericeStr = nextPartitionHostAndServiceArr.apply(1)
+      
+      val _serviecMap = hostMap.get (nextPartitionHostStr).get
+      val _partitionList = _serviecMap.get (nextPartitionSericeStr).get
+      val _partition = _partitionList.get (0)
+      
+      return Option (_partition)
+
     }
       
     def getMetaNum (partition: SequoiadbPartition): Int = {
@@ -660,16 +726,27 @@ class SequoiadbPartitioner(
                     removePartition = true
                   }
                   
-                  
                   if (removePartition) {
                     
                     if (_partitionArr.length == 0) {
                       _serviceMap.remove(service)
+                      
                       if (_serviceMap.isEmpty) {
                         _hostMap.remove(host)
+                        haveReadHostTopology.remove (host)
+                        hostTopology.remove (host)
+                        hostSet.remove (host)
+                        haveReadHostSet.clear
                       }
                       else {
                         _hostMap.put (host, _serviceMap)
+                        
+                        val serviceSet = hostTopology.get (host).get 
+                        val haveReadServiceSet = haveReadHostTopology.get (host).get
+                        serviceSet.remove (service)
+                        haveReadServiceSet.clear
+                        hostTopology.put (host, serviceSet)
+                        haveReadHostTopology.put (host, haveReadServiceSet)
                       }
                     }
                     else {
@@ -686,6 +763,7 @@ class SequoiadbPartitioner(
           }
         }
       }
+
       return Option(_hostMap)
     }
       
@@ -696,6 +774,12 @@ class SequoiadbPartitioner(
         for (serviceObj <- serviceMap) {
           val partitionArr = serviceObj._2
           for (partition <- partitionArr) {
+            haveReadHostSet.add (partition.hosts.get(0).getHost)
+            
+            if (haveReadHostSet.equals(hostSet)) {
+              haveReadHostSet.clear
+            }
+            
             return Option(partition)
           }
         }
@@ -720,7 +804,7 @@ class SequoiadbPartitioner(
           }
         }
         else {
-          partition2 = getPartition (tmpHostMap2, partition2).get
+          partition2 = getPartition (tmpHostMap2).get
           if (Option (partition2) != None) {
             partition_list += partition2
           }
