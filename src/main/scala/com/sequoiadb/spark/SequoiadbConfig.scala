@@ -127,7 +127,7 @@ object SequoiadbConfig {
   //  Default values
 
   val DefaultSamplingRatio = 1.0
-  val DefaultPreference = ""
+  val DefaultPreference = "A"
   val DefaultPort = "11810"
   val DefaultUsername = ""
   val DefaultPassword = ""

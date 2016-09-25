@@ -105,6 +105,9 @@ class SequoiadbReader(
           ConnectionUtil.initSequoiadbOptions ) )
       // pickup a connection
       val connection = dbConnectionPool.get.getConnection
+
+      connection.setSessionAttr(
+          ConnectionUtil.getPreferenceObj(config[String](SequoiadbConfig.Preference)))
       // get collection space
       val cs = connection.getCollectionSpace(sdbPartition.collection.collectionspace)
       // get collection

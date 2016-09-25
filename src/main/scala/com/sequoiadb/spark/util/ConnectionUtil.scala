@@ -43,8 +43,8 @@ object ConnectionUtil {
   }
   def initSequoiadbOptions : SequoiadbOption = {
     val dsOpt = new SequoiadbOption()
-    // connection pool max to 10
-    dsOpt.setMaxConnectionNum(10)
+    // connection pool max to 3
+    dsOpt.setMaxConnectionNum(3)
     dsOpt.setInitConnectionNum(1)
     dsOpt
   }
