@@ -81,8 +81,37 @@ class SequoiadbConfig (
    * @tparam T Property expected value type.
    * @return An optional value of expected type
    */
-  def get[T:ClassTag](property: Property): Option[T] =
-    properties.get(property).map(_.asInstanceOf[T])
+  def get[T:ClassTag](property: Property): Option[T] = {
+    val t = properties.get(property).map(_.asInstanceOf[T])
+    if (t == None || t == Option ("")) {
+      return SequoiadbConfig.Defaults.get (property).map(_.asInstanceOf[T])
+    }
+    if (property.equals(SequoiadbConfig.Preference)) {
+      val _preferenceValue = t.get.asInstanceOf[String]
+//      if (preferenceValue.eq)
+      // preferenceValue should equal "m"/"M"/"s"/"S"/"a"/"A"/"1-7"
+      val preferenceValue = _preferenceValue match {
+        case "m" => "m"
+        case "M" => "M"
+        case "s" => "s"
+        case "S" => "S"
+        case "a" => "a"
+        case "A" => "A"
+        case "1" => "1"
+        case "2" => "2"
+        case "3" => "3"
+        case "4" => "4"
+        case "5" => "5"
+        case "6" => "6"
+        case "7" => "7"
+        case _   => SequoiadbConfig.DefaultPreference
+      }
+      return Option (
+            ("{PreferedInstance:\"" + preferenceValue + "\"}").asInstanceOf[T]
+          )
+    }
+    t
+  }
 
   /**
    * Gets specified property from current configuration object.
@@ -106,7 +135,7 @@ object SequoiadbConfig {
   val CollectionSpace = "collectionspace"
   val Collection      = "collection"
   val SamplingRatio   = "samplingRatio"
-  val Preference      = "preference"
+  val Preference      = "preference"  // "m"/"M"/"s"/"S"/"a"/"A"/"1-7"
   val Username        = "username"
   val Password        = "password"
   val ScanType        = "scanType"    // auto/ixscan/tbscan
@@ -127,14 +156,19 @@ object SequoiadbConfig {
   //  Default values
 
   val DefaultSamplingRatio = 1.0
-  val DefaultPreference = ""
+  val DefaultPreference = "S"
   val DefaultPort = "11810"
+  val DefaultHost = "localhost"
   val DefaultUsername = ""
   val DefaultPassword = ""
   val DefaultScanType = "auto"
 
   val Defaults = Map(
     SamplingRatio -> DefaultSamplingRatio,
-    Preference -> DefaultPreference,
-    ScanType -> DefaultScanType)
+    Preference -> ("{PreferedInstance:\"" + DefaultPreference + "\"}"),
+    ScanType -> DefaultScanType,
+    Host -> List(DefaultHost + ":" + DefaultPort),
+    Username -> DefaultUsername,
+    Password -> DefaultPassword
+    )
 }

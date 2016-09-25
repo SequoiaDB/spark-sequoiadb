@@ -37,40 +37,78 @@ with Matchers {
     private val collection: String = "bar"
     private val username : String = "testusername"
     private val password : String = "testpassword"
-    private val preference : String = "{PreferedInstance:\"M\"}"
-    private val scanType : String = "auto"
+    private val preference : String = "M"
+    private val scanType : String = "ixscan"
     
     "Config" should "be initialized successful" in {
       val testConfig = SequoiadbConfigBuilder()
-      .set(SequoiadbConfig.Host,List(host + ":" + port))
-      .set(SequoiadbConfig.CollectionSpace,collectionspace)
-      .set(SequoiadbConfig.Collection,collection)
-      .set(SequoiadbConfig.SamplingRatio,1.0f)
-      .set(SequoiadbConfig.Username,"")
-      .set(SequoiadbConfig.Password,"")
-      .set(SequoiadbConfig.Preference,"")
-      .set(SequoiadbConfig.ScanType,"")
+      .set(SequoiadbConfig.Host, List(host + ":" + port))
+      .set(SequoiadbConfig.CollectionSpace, collectionspace)
+      .set(SequoiadbConfig.Collection, collection)
+      .set(SequoiadbConfig.SamplingRatio, 1.0f)
+      .set(SequoiadbConfig.Username, "")
+      .set(SequoiadbConfig.Password, "")
+      .set(SequoiadbConfig.Preference, "")
+      .set(SequoiadbConfig.ScanType, "")
       .build()
     }
 
     it should "contains predefined values" in {
       val testConfig = SequoiadbConfigBuilder()
-      .set(SequoiadbConfig.Host,List(host + ":" + port))
-      .set(SequoiadbConfig.CollectionSpace,collectionspace)
-      .set(SequoiadbConfig.Collection,collection)
-      .set(SequoiadbConfig.SamplingRatio,1.0f)
-      .set(SequoiadbConfig.Username,username)
-      .set(SequoiadbConfig.Password,password)
-      .set(SequoiadbConfig.Preference,"")
-      .set(SequoiadbConfig.ScanType,scanType)
+      .set(SequoiadbConfig.Host, List(host + ":" + port))
+      .set(SequoiadbConfig.CollectionSpace, collectionspace)
+      .set(SequoiadbConfig.Collection, collection)
+      .set(SequoiadbConfig.SamplingRatio, 1.0f)
+      .set(SequoiadbConfig.Username, username)
+      .set(SequoiadbConfig.Password, password)
+      .set(SequoiadbConfig.Preference, preference)
+      .set(SequoiadbConfig.ScanType, scanType)
       .build()
       testConfig.get[List[String]](SequoiadbConfig.Host).getOrElse("") should equal (List(host + ":" + port))
       testConfig.get[String](SequoiadbConfig.CollectionSpace).getOrElse("") should equal(collectionspace)
       testConfig.get[String](SequoiadbConfig.Collection).getOrElse("") should equal(collection)
       testConfig.get[Float](SequoiadbConfig.SamplingRatio).getOrElse("") should equal(1.0)
-      testConfig.get[String](SequoiadbConfig.Preference).getOrElse("") should equal("")
+      testConfig.get[String](SequoiadbConfig.Username).getOrElse("") should equal(username)
+      testConfig.get[String](SequoiadbConfig.Password).getOrElse("") should equal(password)
+      testConfig.get[String](SequoiadbConfig.Preference).getOrElse("") should equal("{PreferedInstance:\"M\"}")
       testConfig.get[String](SequoiadbConfig.ScanType).getOrElse("") should equal(scanType)
     }
+    
+    it should "contains predefined default values" in {
+      val testConfig = SequoiadbConfigBuilder()
+      .set(SequoiadbConfig.Host, "")
+      .set(SequoiadbConfig.CollectionSpace, collectionspace)
+      .set(SequoiadbConfig.Collection, collection)
+      .set(SequoiadbConfig.SamplingRatio, 1.0f)
+      .set(SequoiadbConfig.Username, "")
+      .set(SequoiadbConfig.Password, "")
+      .set(SequoiadbConfig.Preference, "")
+      .set(SequoiadbConfig.ScanType, "")
+      .build()
+      testConfig.get[List[String]](SequoiadbConfig.Host).getOrElse("") should equal (List("localhost" + ":" + 11810))
+      testConfig.get[String](SequoiadbConfig.CollectionSpace).getOrElse("") should equal(collectionspace)
+      testConfig.get[String](SequoiadbConfig.Collection).getOrElse("") should equal(collection)
+      testConfig.get[Float](SequoiadbConfig.SamplingRatio).getOrElse("") should equal(1.0)
+      testConfig.get[String](SequoiadbConfig.Username).getOrElse("") should equal("")
+      testConfig.get[String](SequoiadbConfig.Password).getOrElse("") should equal("")
+      testConfig.get[String](SequoiadbConfig.Preference).getOrElse("") should equal("{PreferedInstance:\"S\"}")
+      testConfig.get[String](SequoiadbConfig.ScanType).getOrElse("") should equal("auto")
+    }
+    
+    it should "contains predefined default values 2" in {
+      val testConfig = SequoiadbConfigBuilder()
+      .set(SequoiadbConfig.Host, "")
+      .set(SequoiadbConfig.CollectionSpace, collectionspace)
+      .set(SequoiadbConfig.Collection, collection)
+      .set(SequoiadbConfig.SamplingRatio, 1.0f)
+      .set(SequoiadbConfig.Username, "")
+      .set(SequoiadbConfig.Password, "")
+      .set(SequoiadbConfig.Preference, "g")
+      .set(SequoiadbConfig.ScanType, "")
+      .build()
+      testConfig.get[String](SequoiadbConfig.Preference).getOrElse("") should equal("{PreferedInstance:\"S\"}")
+    }
+    
     
     it should "fails if any arguments not defined" in {
       val testConfigBuilder = SequoiadbConfigBuilder()
