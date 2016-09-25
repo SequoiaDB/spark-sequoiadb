@@ -393,7 +393,7 @@ class SequoiadbPartitioner(
         LOG.info ("This query is table scan, then get SDB data by getQueryMeta")
         partition_list = Option(computePartitionsByGetQueryMeta (queryObj))
       }
-      else {
+      else { // checkScanType = 'auto'
         // this query is table scan, then get SDB data by getQueryMeta
         if ( scanType.get.equals("tbscan")) {
           LOG.info ("This query is table scan, then get SDB data by getQueryMeta")
