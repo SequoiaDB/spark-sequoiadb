@@ -44,8 +44,8 @@ object ConnectionUtil {
   def initSequoiadbOptions : SequoiadbOption = {
     val dsOpt = new SequoiadbOption()
     // connection pool max to 3
-    dsOpt.setMaxConnectionNum(3)
-    dsOpt.setInitConnectionNum(1)
+    dsOpt.setMaxCount (3)
+    dsOpt.setDeltaIncCount (1)
     dsOpt
   }
   def getPreferenceObj ( preference: String ) : BSONObject = {
