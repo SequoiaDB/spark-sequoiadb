@@ -26,7 +26,7 @@ package com.sequoiadb.spark.util
  * ======== ================== ================================================
  * 20150307 Tao Wang           Initial Draft
  */
-import com.sequoiadb.base.SequoiadbOption
+import com.sequoiadb.datasource.DatasourceOptions
 import com.sequoiadb.net.ConfigOptions
 import com.sequoiadb.exception.BaseException
 import org.bson.util.JSON
@@ -41,11 +41,12 @@ object ConnectionUtil {
     nwOpt.setMaxAutoConnectRetryTime(0)
     nwOpt
   }
-  def initSequoiadbOptions : SequoiadbOption = {
-    val dsOpt = new SequoiadbOption()
+  def initSequoiadbOptions : DatasourceOptions = {
+    val dsOpt = new DatasourceOptions()
     // connection pool max to 3
     dsOpt.setMaxCount (3)
     dsOpt.setDeltaIncCount (1)
+    dsOpt.setMaxIdleCount (1)
     dsOpt
   }
   def getPreferenceObj ( preference: String ) : BSONObject = {
