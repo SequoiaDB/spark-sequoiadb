@@ -37,12 +37,14 @@ $ bin/spark-shell --jars /Users/sequoiadb/spark-sequoiadb/lib/sequoiadb-driver-2
 15/03/09 14:35:45 INFO HttpServer: Starting HTTP Server  
 15/03/09 14:35:45 INFO Utils: Successfully started service 'HTTP class server' on port 59998.  
 Welcome to
+```
       ____              __
      / __/__  ___ _____/ /__
     _\ \/ _ \/ _ `/ __/  '_/
    /___/ .__/\_,_/_/ /_/\_\   version 2.0.0
       /_/
          
+```
 Using Scala version 2.11.8 (Java HotSpot(TM) 64-Bit Server VM, Java 1.7.0_80)
 Type in expressions to have them evaluated.
 Type :help for more information.
