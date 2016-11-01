@@ -168,7 +168,7 @@ object SequoiadbConfig {
     Preference -> ("{PreferedInstance:\"" + DefaultPreference + "\"}"),
     ScanType -> DefaultScanType,
     Host -> List(DefaultHost + ":" + DefaultPort),
-    Username -> DefaultUsername,
-    Password -> DefaultPassword
+    Username -> (DefaultUsername),
+    Password -> (DefaultPassword)
     )
 }
