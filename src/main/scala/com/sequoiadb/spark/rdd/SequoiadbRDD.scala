@@ -9,6 +9,7 @@ import org.apache.spark.sql.sources.Filter
 import org.apache.spark.{Partition, TaskContext}
 import org.bson.BSONObject
 import org.slf4j.{Logger, LoggerFactory}
+import scala.collection.mutable.ArrayBuffer
 //import java.io.FileOutputStream;  
 
 /**
@@ -44,7 +45,11 @@ class SequoiadbRDD(
   }
 
   override def getPreferredLocations(split: Partition): Seq[String] = {
-    split.asInstanceOf[SequoiadbPartition].hosts.map(_.getHost)
+//    split.asInstanceOf[SequoiadbPartition].hosts.map(_.getHost)
+    val hostBuffer : ArrayBuffer[String] = new ArrayBuffer[String]
+    val host = split.asInstanceOf[SequoiadbPartition].hosts.head
+    hostBuffer += host.getHost
+    hostBuffer.toList
     
   }
 

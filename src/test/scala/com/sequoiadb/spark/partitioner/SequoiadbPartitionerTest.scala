@@ -56,39 +56,77 @@ with Matchers {
   hostArray6 += host6
   
   
-  val tmp_partition_list: ArrayBuffer[SequoiadbPartition] = ArrayBuffer[SequoiadbPartition]()
+  val tmp_partition_list_tbscan: ArrayBuffer[SequoiadbPartition] = ArrayBuffer[SequoiadbPartition]()
   
-  tmp_partition_list += SequoiadbPartition ( 1, SequoiadbConfig.scanTypeGetQueryMeta, 
+  tmp_partition_list_tbscan += SequoiadbPartition ( 1, SequoiadbConfig.scanTypeGetQueryMeta, 
                  hostArray1,
                  SequoiadbCollection("foo.bar"),
                  Option("{'Datablocks':[1], 'ScanType':'tbscan', 'HostName':'sdb1', 'ServiceName':'11910'}"))
-  tmp_partition_list += SequoiadbPartition ( 2, SequoiadbConfig.scanTypeGetQueryMeta, 
+  tmp_partition_list_tbscan += SequoiadbPartition ( 2, SequoiadbConfig.scanTypeGetQueryMeta, 
                  hostArray2,
                  SequoiadbCollection("foo.bar"),
                  Option("{'Datablocks':[1], 'ScanType':'tbscan', 'HostName':'sdb1', 'ServiceName':'11920'}"))
-  tmp_partition_list += SequoiadbPartition ( 3, SequoiadbConfig.scanTypeGetQueryMeta, 
+  tmp_partition_list_tbscan += SequoiadbPartition ( 3, SequoiadbConfig.scanTypeGetQueryMeta, 
                  hostArray3,
                  SequoiadbCollection("foo.bar"),
                  Option("{'Datablocks':[1], 'ScanType':'tbscan', 'HostName':'sdb1', 'ServiceName':'11930'}"))               
-  tmp_partition_list += SequoiadbPartition ( 4, SequoiadbConfig.scanTypeGetQueryMeta, 
+  tmp_partition_list_tbscan += SequoiadbPartition ( 4, SequoiadbConfig.scanTypeGetQueryMeta, 
                  hostArray4,
                  SequoiadbCollection("foo.bar"),
                  Option("{'Datablocks':[1], 'ScanType':'tbscan', 'HostName':'sdb2', 'ServiceName':'11910'}"))               
-  tmp_partition_list += SequoiadbPartition ( 5, SequoiadbConfig.scanTypeGetQueryMeta, 
+  tmp_partition_list_tbscan += SequoiadbPartition ( 5, SequoiadbConfig.scanTypeGetQueryMeta, 
                  hostArray5,
                  SequoiadbCollection("foo.bar"),
                  Option("{'Datablocks':[1], 'ScanType':'tbscan', 'HostName':'sdb3', 'ServiceName':'11910'}"))               
-  tmp_partition_list += SequoiadbPartition ( 6, SequoiadbConfig.scanTypeGetQueryMeta, 
+  tmp_partition_list_tbscan += SequoiadbPartition ( 6, SequoiadbConfig.scanTypeGetQueryMeta, 
                  hostArray6,
                  SequoiadbCollection("foo.bar"),
                  Option("{'Datablocks':[1], 'ScanType':'tbscan', 'HostName':'sdb4', 'ServiceName':'11910'}"))               
   
-  val partition_list = Option (tmp_partition_list.toArray)
+  val partition_list_tbscan = Option (tmp_partition_list_tbscan.toArray)
   
-  val seq_partition_list = SequoiadbPartitioner.seqPartitionList (partition_list)
-  val seq_partition_info = SequoiadbPartitioner.getConnInfo (seq_partition_list.get)
- 
+  val seq_partition_list_tbscan = SequoiadbPartitioner.seqPartitionList (partition_list_tbscan)
+  val seq_partition_info_tbscan = SequoiadbPartitioner.getConnInfo (seq_partition_list_tbscan.get)
+
+  
   it should "be equal seq_partition_info" in {
-      seq_partition_info should equal ("ArrayBuffer(sdb2:11910:1, sdb1:11910:1, sdb3:11910:1, sdb1:11930:1, sdb4:11910:1, sdb1:11920:1)")
+      seq_partition_info_tbscan should equal ("ArrayBuffer(sdb2:11910:1, sdb1:11910:1, sdb3:11910:1, sdb1:11930:1, sdb4:11910:1, sdb1:11920:1)")
+  }
+  
+  
+  val tmp_partition_list_ixscan: ArrayBuffer[SequoiadbPartition] = ArrayBuffer[SequoiadbPartition]()
+  
+  tmp_partition_list_ixscan += SequoiadbPartition ( 1, SequoiadbConfig.scanTypeExplain, 
+                 hostArray1,
+                 SequoiadbCollection("foo.bar"),
+                 Option("{}"))
+  tmp_partition_list_ixscan += SequoiadbPartition ( 2, SequoiadbConfig.scanTypeExplain, 
+                 hostArray2,
+                 SequoiadbCollection("foo.bar"),
+                 Option("{}"))
+  tmp_partition_list_ixscan += SequoiadbPartition ( 3, SequoiadbConfig.scanTypeExplain, 
+                 hostArray3,
+                 SequoiadbCollection("foo.bar"),
+                 Option("{}"))               
+  tmp_partition_list_ixscan += SequoiadbPartition ( 4, SequoiadbConfig.scanTypeExplain, 
+                 hostArray4,
+                 SequoiadbCollection("foo.bar"),
+                 Option("{}"))               
+  tmp_partition_list_ixscan += SequoiadbPartition ( 5, SequoiadbConfig.scanTypeExplain, 
+                 hostArray5,
+                 SequoiadbCollection("foo.bar"),
+                 Option("{}"))               
+  tmp_partition_list_ixscan += SequoiadbPartition ( 6, SequoiadbConfig.scanTypeExplain, 
+                 hostArray6,
+                 SequoiadbCollection("foo.bar"),
+                 Option("{}"))               
+  
+  val partition_list_ixscan = Option (tmp_partition_list_ixscan.toArray)
+  
+  val seq_partition_list_ixscan = SequoiadbPartitioner.seqPartitionList (partition_list_ixscan)
+  val seq_partition_info_ixscan = SequoiadbPartitioner.getConnInfo (seq_partition_list_ixscan.get)
+
+  it should "be equal seq_partition_info" in {
+      seq_partition_info_ixscan should equal ("ArrayBuffer(sdb2:11910, sdb1:11910, sdb3:11910, sdb1:11930, sdb4:11910, sdb1:11920)")
   }
 }

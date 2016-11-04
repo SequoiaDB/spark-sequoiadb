@@ -719,7 +719,7 @@ object SequoiadbPartitioner {
         val _tNewNodeList = _nodeList.dropWhile { 
           x => {
             oldCsName.equals(x.collection.collectionspace) &&
-            oldCollectionName.equals(x.collection.collection)
+            oldClName.equals(x.collection.collection)
             }
         }
         _newNodeList = _tNewNodeList
