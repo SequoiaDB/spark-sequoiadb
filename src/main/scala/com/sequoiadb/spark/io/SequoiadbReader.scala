@@ -68,6 +68,7 @@ class SequoiadbReader(
     }
     dbConnectionPool.fold(ifEmpty=()) { connectionpool =>
       dbConnection.fold(ifEmpty=()) { connection =>
+        connection.closeAllCursors()
         connectionpool.close(connection)
       }
       connectionpool.close
@@ -94,7 +95,6 @@ class SequoiadbReader(
     // convert from Spark Partition to SequoiadbPartition
     val sdbPartition = partition.asInstanceOf[SequoiadbPartition]
     try {
-      // TODO: Need to handle PreferedInstance in config.preference
       // For now let's simply turn the selection to sdbdatasource
       dbConnectionPool = Option ( new SequoiadbDatasource (
           // use the hosts for the given partition
@@ -105,7 +105,7 @@ class SequoiadbReader(
           ConnectionUtil.initSequoiadbOptions ) )
       // pickup a connection
       val connection = dbConnectionPool.get.getConnection
-
+      
       connection.setSessionAttr(
           ConnectionUtil.getPreferenceObj(config[String](SequoiadbConfig.Preference)))
       // get collection space

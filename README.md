@@ -8,14 +8,14 @@ Spark-SequoiaDB library is used to integrate SequoiaDB and Spark, in order to gi
 
 ## Requirements
 
-This library requires Spark 2.0.0, Scala 2.11.8+ and sequoiadb-driver-1.12
+This library requires Spark 2.0.0, Scala 2.11.8+ and sequoiadb-driver-2.6
 
 ## Using the library
 
 You can link against this library by putting the following lines in your program:
 ```
 <groupId>com.sequoiadb</groupId>
-<artifactId>spark-sequoiadb_2.10</artifactId>
+<artifactId>spark-sequoiadb_2.11</artifactId>
 <version>LATEST</version>
 ```
 You can also download the project separately by doing:
@@ -32,22 +32,22 @@ or use the following command to build with all scala versions:
 sbt/sbt "+ package"
 ```
 You can load the library into spark-shell by using --jars command line option.  
-$ bin/spark-shell --jars /Users/sequoiadb/spark-sequoiadb/lib/sequoiadb-driver-1.12.0.jar,/Users/sequoiadb/spark-sequoiadb/target/spark-sequoiadb_2.11-1.12.jar
+$ bin/spark-shell --jars /Users/sequoiadb/spark-sequoiadb/lib/sequoiadb-driver-2.6.0.jar,/Users/sequoiadb/spark-sequoiadb/target/spark-sequoiadb_2.11-2.6.jar
 …  
 15/03/09 14:35:45 INFO HttpServer: Starting HTTP Server  
 15/03/09 14:35:45 INFO Utils: Successfully started service 'HTTP class server' on port 59998.  
-Welcome to  
+Welcome to
 ```
-      ____              __  
-     / __/__  ___ _____/ /__  
-    _\ \/ _ \/ _ `/ __/  '_/  
-   /___/ .__/\_,_/_/ /_/\_\   version 1.3.0  
-      /_/  
+      ____              __
+     / __/__  ___ _____/ /__
+    _\ \/ _ \/ _ `/ __/  '_/
+   /___/ .__/\_,_/_/ /_/\_\   version 2.0.0
+      /_/
+         
 ```
-  
-Using Scala version 2.10.4 (Java HotSpot(TM) 64-Bit Server VM, Java 1.7.0_75)  
-Type in expressions to have them evaluated.  
-Type :help for more information.  
+Using Scala version 2.11.8 (Java HotSpot(TM) 64-Bit Server VM, Java 1.7.0_80)
+Type in expressions to have them evaluated.
+Type :help for more information.
 …  
 15/03/09 14:35:51 INFO SparkILoop: Created spark context..  
 Spark context available as sc.  

@@ -88,7 +88,6 @@ class SequoiadbConfig (
     }
     if (property.equals(SequoiadbConfig.Preference)) {
       val _preferenceValue = t.get.asInstanceOf[String]
-//      if (preferenceValue.eq)
       // preferenceValue should equal "m"/"M"/"s"/"S"/"a"/"A"/"1-7"
       val preferenceValue = _preferenceValue match {
         case "m" => "m"
@@ -109,6 +108,14 @@ class SequoiadbConfig (
       return Option (
             ("{PreferedInstance:\"" + preferenceValue + "\"}").asInstanceOf[T]
           )
+    }
+    if (property.equals(SequoiadbConfig.BulkSize)) {
+      val _bulkSizeValue = t.get.asInstanceOf[String].toInt
+      if (_bulkSizeValue <= 0) {
+        return Option (
+          (SequoiadbConfig.DefaultBulkSize).asInstanceOf[T]    
+        )
+      }
     }
     t
   }
@@ -138,8 +145,8 @@ object SequoiadbConfig {
   val Preference      = "preference"  // "m"/"M"/"s"/"S"/"a"/"A"/"1-7"
   val Username        = "username"
   val Password        = "password"
-  val ScanType        = "scanType"    // auto/ixscan/tbscan
-  val BulkSize        = 500
+  val ScanType        = "scantype"    // auto/ixscan/tbscan
+  val BulkSize        = "bulksize"    // default 512
   val scanTypeExplain = 0
   val scanTypeGetQueryMeta = 1
 
@@ -151,7 +158,9 @@ object SequoiadbConfig {
     Preference,
     Username,
     Password,
-    ScanType)
+    ScanType,
+    BulkSize
+    )
 
   //  Default values
 
@@ -162,13 +171,15 @@ object SequoiadbConfig {
   val DefaultUsername = ""
   val DefaultPassword = ""
   val DefaultScanType = "auto"
+  val DefaultBulkSize = "512"
 
   val Defaults = Map(
     SamplingRatio -> DefaultSamplingRatio,
     Preference -> ("{PreferedInstance:\"" + DefaultPreference + "\"}"),
     ScanType -> DefaultScanType,
     Host -> List(DefaultHost + ":" + DefaultPort),
-    Username -> DefaultUsername,
-    Password -> DefaultPassword
+    Username -> (DefaultUsername),
+    Password -> (DefaultPassword),
+    BulkSize -> (DefaultBulkSize)
     )
 }

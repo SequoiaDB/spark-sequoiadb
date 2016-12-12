@@ -37,6 +37,12 @@ import com.sequoiadb.spark.schema.SequoiadbSchema
 import com.sequoiadb.spark.schema.SequoiadbRowConverter
 import com.sequoiadb.spark.io.SequoiadbWriter
 import com.sequoiadb.exception.BaseException
+import com.sequoiadb.base.SequoiadbDatasource
+import com.sequoiadb.spark.util.ConnectionUtil
+import com.sequoiadb.base.Sequoiadb
+import java.util.ArrayList
+import org.slf4j.{Logger, LoggerFactory}
+import com.sequoiadb.net.ConfigOptions
 
 /**
  * A SequoiaDB baseRelation that can eliminate unneeded columns
@@ -60,6 +66,8 @@ case class SequoiadbRelation(
 
   private val rddPartitioner: SequoiadbPartitioner =
     new SequoiadbPartitioner(config)
+  
+  private var LOG: Logger = LoggerFactory.getLogger(this.getClass.getName())
 
   /**
    * Default schema to be used in case no schema was provided before.
@@ -80,6 +88,9 @@ case class SequoiadbRelation(
    */
   override val schema: StructType = schemaProvided.getOrElse(lazySchema)
 
+  // TODO
+  override def unhandledFilters(filters: Array[Filter]): Array[Filter] = filters
+  
   /**
    * Override build scan function that takes requiredColumns and filters as input
    * @param requiredColumns Array list of columns that required
@@ -107,8 +118,33 @@ case class SequoiadbRelation(
   override def insert(data: DataFrame, overwrite: Boolean): Unit = {
     val schema = data.schema
     if ( overwrite ) {
-      // we don't support truncate yet
-      throw new BaseException ( "SDB_OPTION_NOT_SUPPORT" )
+      var connection : Option[Sequoiadb] = None
+      try {
+        val _list : java.util.List[String] = new java.util.ArrayList[String]()
+        _list.add("chen:11810")
+        val _list2 = config[List[String]](SequoiadbConfig.Host)
+        for (t <- _list2) {
+          _list.add (t)
+        }
+        // create a connection
+        connection = Option (new Sequoiadb (
+            _list,
+            config[String](SequoiadbConfig.Username),
+            config[String](SequoiadbConfig.Password),
+            new ConfigOptions())
+            )
+        // locate collection
+        val cl = connection.get.getCollectionSpace(
+            config[String](SequoiadbConfig.CollectionSpace)).getCollection(
+                config[String](SequoiadbConfig.Collection))
+        cl.truncate()
+      } catch {
+        case ex: Exception => throw SequoiadbException(ex.getMessage, ex)
+      } finally {
+        connection.fold(ifEmpty=()) { conn => 
+          conn.disconnect()
+        }
+      } // finally
     }
     data.foreachPartition(it => {
       // always write through coord node which specified in config

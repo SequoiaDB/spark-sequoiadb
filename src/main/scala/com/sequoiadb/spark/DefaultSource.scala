@@ -77,6 +77,8 @@ class DefaultSource extends RelationProvider with SchemaRelationProvider with Cr
     val preference = parameters.getOrElse(Preference, DefaultPreference)
     
     val scanType = parameters.getOrElse(ScanType, DefaultScanType)
+    
+    val bulksize = parameters.getOrElse(BulkSize, DefaultBulkSize)
 
     SequoiadbConfigBuilder()
         .set(Host,host)
@@ -86,7 +88,9 @@ class DefaultSource extends RelationProvider with SchemaRelationProvider with Cr
         .set(Username,username)
         .set(Password,password)
         .set(Preference,preference)
-        .set(ScanType, scanType).build()
+        .set(ScanType, scanType)
+        .set(BulkSize, bulksize)
+        .build()
   }
   
   /**
@@ -125,3 +129,4 @@ class DefaultSource extends RelationProvider with SchemaRelationProvider with Cr
     }
   }
 }
+

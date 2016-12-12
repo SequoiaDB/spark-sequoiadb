@@ -56,7 +56,7 @@ import sun.security.util.Cache.EqualByteArray
 /**
  * @param config Partition configuration
  */
-class SequoiadbPartitioner(
+case class SequoiadbPartitioner(
   config: SequoiadbConfig) extends Serializable {
   /**
    * build full collection name from cs and cl name
@@ -142,7 +142,6 @@ class SequoiadbPartitioner(
     var rg_list : Option[ArrayBuffer[Map[String, AnyRef]]] = None
     var rg_map : HashMap[String, Seq[SequoiadbHost]] = HashMap[String, Seq[SequoiadbHost]]()
     try {
-      // TODO: need to close ds afterwards
       ds = Option(new SequoiadbDatasource (
           config[List[String]](SequoiadbConfig.Host),
           //new ArrayList(Arrays.asList(config[List[String]](SequoiadbConfig.Host).toArray: _*)),
@@ -205,6 +204,7 @@ class SequoiadbPartitioner(
     } finally {
       ds.fold(ifEmpty=()) { connectionpool =>
         connection.fold(ifEmpty=()) { conn =>
+          conn.closeAllCursors()
           connectionpool.close(conn)
         }
         connectionpool.close
@@ -224,7 +224,6 @@ class SequoiadbPartitioner(
     val collectionSet:  Set [String] = scala.collection.mutable.Set ()
     
     try {
-      // TODO: need to close ds afterwards
       ds = Option(new SequoiadbDatasource (
           config[List[String]](SequoiadbConfig.Host),
           //new ArrayList(Arrays.asList(config[List[String]](SequoiadbConfig.Host).toArray: _*)),
@@ -318,6 +317,7 @@ class SequoiadbPartitioner(
     } finally {
       ds.fold(ifEmpty=()) { connectionpool =>
         connection.fold(ifEmpty=()) { conn =>
+          conn.closeAllCursors()
           connectionpool.close(conn)
         }
         connectionpool.close
@@ -337,7 +337,6 @@ class SequoiadbPartitioner(
     var scanType : Option[String] = None
     val queryObj : BSONObject = SequoiadbReader.queryPartition(filters)
     try {
-      // TODO: need to close ds afterwards
       ds = Option(new SequoiadbDatasource (
           config[List[String]](SequoiadbConfig.Host),
           //new ArrayList(Arrays.asList(config[List[String]](SequoiadbConfig.Host).toArray: _*)),
@@ -417,13 +416,24 @@ class SequoiadbPartitioner(
     } finally {
       ds.fold(ifEmpty=()) { connectionpool =>
         connection.fold(ifEmpty=()) { conn =>
+          conn.closeAllCursors()
           connectionpool.close(conn)
         }
         connectionpool.close
       } // ds.fold(ifEmpty=())
     } // finally
     
-    def getConnInfo (partition_list: Array[SequoiadbPartition]):String = {
+    
+    LOG.debug ("partition seq before, partition_list = " + SequoiadbPartitioner.getConnInfo (partition_list.get))
+    partition_list = SequoiadbPartitioner.seqPartitionList (partition_list)
+    LOG.debug ("partition seq over, partition_list = " + SequoiadbPartitioner.getConnInfo (partition_list.get))
+    partition_list.get
+  }
+}
+
+object SequoiadbPartitioner {
+  
+  def getConnInfo (partition_list: Array[SequoiadbPartition]):String = {
       val tmpPartitionArr: ArrayBuffer [String] = ArrayBuffer [String] ()
       
       for (partition <- partition_list) {
@@ -441,18 +451,13 @@ class SequoiadbPartitioner(
       }
       tmpPartitionArr.toString
     }
-    LOG.debug ("partition seq before, partition_list = " + getConnInfo (partition_list.get))
-    partition_list = seqPartitionList (partition_list)
-    LOG.debug ("partition seq over, partition_list = " + getConnInfo (partition_list.get))
-    partition_list.get
-  }
-  
-  
+
   /**
-   * Sequence partition_list
-   * @param _partition_list
+   *
+   * @param partition_list.
+   * @return Sequence partition_list
    */
-  private def seqPartitionList (tmp_partition_list: Option[Array[SequoiadbPartition]]): Option[Array[SequoiadbPartition]] = {
+  def seqPartitionList (tmp_partition_list: Option[Array[SequoiadbPartition]]): Option[Array[SequoiadbPartition]] = {
     val partition_list: ArrayBuffer[SequoiadbPartition] = ArrayBuffer[SequoiadbPartition]()
     val hostSet:  Set [String] = scala.collection.mutable.Set ()
     val haveReadHostSet:  Set [String] = scala.collection.mutable.Set ()
@@ -686,85 +691,68 @@ class SequoiadbPartitioner(
       val oldH = oldHOST.getHost.toString
       val oldS = oldHOST.getService.toString
       val oldCollectionObj = oldPartition.collection
-      val oldCsName = oldCollectionObj.collectionspace
-      val oldClName = oldCollectionObj.collection
+      val oldCsName = oldPartition.collection.collectionspace
+      val oldClName = oldPartition.collection.collection
       val oldCollectionName = oldCollectionObj.collectionname
       val oldMetaNum = getMetaNum (oldPartition)
+      val scanType = oldPartition.scanType
       
       var removePartition = false
-
+      
+      val _serviceMap = hostMap.get(oldH).get
+      val _nodeList = _serviceMap.get(oldS).get
+      var _newNodeList = _nodeList
+      
+      // this partition's scanType is DataBlocks
+      if (scanType.equals(SequoiadbConfig.scanTypeGetQueryMeta)){ 
+        val _tNewNodeList = _nodeList.dropWhile { 
+          x => {
+            oldMetaNum == getMetaNum (x) &&
+            oldCsName.equals(x.collection.collectionspace) &&
+            oldClName.equals(x.collection.collection)
+            }
+        }
+        _newNodeList = _tNewNodeList
+      }
+      // this partition's scalType is IndexScan
+      else {
+        val _tNewNodeList = _nodeList.dropWhile { 
+          x => {
+            oldCsName.equals(x.collection.collectionspace) &&
+            oldClName.equals(x.collection.collection)
+            }
+        }
+        _newNodeList = _tNewNodeList
+      }
+      
       val _hostMap = hostMap
       
-      for (mapObj <- hostMap){
-        val host = mapObj._1
-        val serviceMap = mapObj._2
-        val _serviceMap = serviceMap
-        if (host.equals(oldH)) {
-          for (serviceObj <- serviceMap) {
-            val service = serviceObj._1
-            val partitionArr = serviceObj._2.asInstanceOf [ArrayBuffer[SequoiadbPartition]]
-            val _partitionArr = partitionArr
-            if (service.equals(oldS)) {
-              var i = 0
-              for (partition <- partitionArr) {
-                val newCollectionObj = partition.collection
-                val newCsName = newCollectionObj.collectionspace
-                val newClName = newCollectionObj.collection
-                val newCollectionName = newCollectionObj.collectionname
-                if (newCollectionName.equals(oldCollectionName)) {
-                  // this partition's scanType is DataBlocks
-                  if (partition.scanType.equals(SequoiadbConfig.scanTypeGetQueryMeta)){ 
-                    val newMetaNum = getMetaNum (partition) 
-                    if ( newMetaNum == oldMetaNum ) {
-                      _partitionArr.remove(i)
-                      removePartition = true
-                    }
-                  }
-                  // this partition's scalType is IndexScan
-                  else {
-                    _partitionArr.remove(i)
-                    removePartition = true
-                  }
-                  
-                  if (removePartition) {
-                    
-                    if (_partitionArr.length == 0) {
-                      _serviceMap.remove(service)
-                      
-                      if (_serviceMap.isEmpty) {
-                        _hostMap.remove(host)
-                        haveReadHostTopology.remove (host)
-                        hostTopology.remove (host)
-                        hostSet.remove (host)
-                        haveReadHostSet.clear
-                      }
-                      else {
-                        _hostMap.put (host, _serviceMap)
-                        
-                        val serviceSet = hostTopology.get (host).get 
-                        val haveReadServiceSet = haveReadHostTopology.get (host).get
-                        serviceSet.remove (service)
-                        haveReadServiceSet.clear
-                        hostTopology.put (host, serviceSet)
-                        haveReadHostTopology.put (host, haveReadServiceSet)
-                      }
-                    }
-                    else {
-                      _serviceMap.put (service, _partitionArr)
-                      _hostMap.put (host, _serviceMap)
-                    }
-                    return Option (_hostMap)
-                  }
-                        
-                }
-                i += 1
-              }
-            }
-          }
+      if (_newNodeList.length == 0) {
+        _serviceMap.remove(oldS)
+        
+        if (_serviceMap.isEmpty) {
+          _hostMap.remove(oldH)
+          haveReadHostTopology.remove (oldH)
+          hostTopology.remove (oldH)
+          hostSet.remove (oldH)
+          haveReadHostSet.clear
+        }
+        else {
+          _hostMap.put (oldH, _serviceMap)
+          
+          val serviceSet = hostTopology.get (oldH).get 
+          val haveReadServiceSet = haveReadHostTopology.get (oldH).get
+          serviceSet.remove (oldS)
+          haveReadServiceSet.clear
+          hostTopology.put (oldH, serviceSet)
+          haveReadHostTopology.put (oldH, haveReadServiceSet)
         }
       }
-
-      return Option(_hostMap)
+      else {
+        _serviceMap.put (oldS, _newNodeList)
+        _hostMap.put (oldH, _serviceMap)
+      }
+      return Option (_hostMap)
     }
       
     def getFirstPartition (hostMap: scala.collection.mutable.Map[String, scala.collection.mutable.Map[String, ArrayBuffer[SequoiadbPartition]]]
