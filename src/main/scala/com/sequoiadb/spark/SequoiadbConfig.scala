@@ -145,7 +145,7 @@ object SequoiadbConfig {
   val Preference      = "preference"  // "m"/"M"/"s"/"S"/"a"/"A"/"1-7"
   val Username        = "username"
   val Password        = "password"
-  val ScanType        = "scanType"    // auto/ixscan/tbscan
+  val ScanType        = "scantype"    // auto/ixscan/tbscan
   val BulkSize        = "bulksize"    // default 512
   val scanTypeExplain = 0
   val scanTypeGetQueryMeta = 1
