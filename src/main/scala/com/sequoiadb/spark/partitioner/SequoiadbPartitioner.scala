@@ -142,7 +142,6 @@ case class SequoiadbPartitioner(
     var rg_list : Option[ArrayBuffer[Map[String, AnyRef]]] = None
     var rg_map : HashMap[String, Seq[SequoiadbHost]] = HashMap[String, Seq[SequoiadbHost]]()
     try {
-      // TODO: need to close ds afterwards
       ds = Option(new SequoiadbDatasource (
           config[List[String]](SequoiadbConfig.Host),
           //new ArrayList(Arrays.asList(config[List[String]](SequoiadbConfig.Host).toArray: _*)),
@@ -205,6 +204,7 @@ case class SequoiadbPartitioner(
     } finally {
       ds.fold(ifEmpty=()) { connectionpool =>
         connection.fold(ifEmpty=()) { conn =>
+          conn.closeAllCursors()
           connectionpool.close(conn)
         }
         connectionpool.close
@@ -224,7 +224,6 @@ case class SequoiadbPartitioner(
     val collectionSet:  Set [String] = scala.collection.mutable.Set ()
     
     try {
-      // TODO: need to close ds afterwards
       ds = Option(new SequoiadbDatasource (
           config[List[String]](SequoiadbConfig.Host),
           //new ArrayList(Arrays.asList(config[List[String]](SequoiadbConfig.Host).toArray: _*)),
@@ -318,6 +317,7 @@ case class SequoiadbPartitioner(
     } finally {
       ds.fold(ifEmpty=()) { connectionpool =>
         connection.fold(ifEmpty=()) { conn =>
+          conn.closeAllCursors()
           connectionpool.close(conn)
         }
         connectionpool.close
@@ -337,7 +337,6 @@ case class SequoiadbPartitioner(
     var scanType : Option[String] = None
     val queryObj : BSONObject = SequoiadbReader.queryPartition(filters)
     try {
-      // TODO: need to close ds afterwards
       ds = Option(new SequoiadbDatasource (
           config[List[String]](SequoiadbConfig.Host),
           //new ArrayList(Arrays.asList(config[List[String]](SequoiadbConfig.Host).toArray: _*)),
@@ -417,6 +416,7 @@ case class SequoiadbPartitioner(
     } finally {
       ds.fold(ifEmpty=()) { connectionpool =>
         connection.fold(ifEmpty=()) { conn =>
+          conn.closeAllCursors()
           connectionpool.close(conn)
         }
         connectionpool.close
