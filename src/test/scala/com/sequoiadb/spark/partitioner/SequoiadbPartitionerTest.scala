@@ -125,8 +125,9 @@ with Matchers {
   
   val seq_partition_list_ixscan = SequoiadbPartitioner.seqPartitionList (partition_list_ixscan)
   val seq_partition_info_ixscan = SequoiadbPartitioner.getConnInfo (seq_partition_list_ixscan.get)
+  print (seq_partition_info_ixscan.toString())
 
-  it should "be equal seq_partition_info" in {
+  it should "be equal seq_partition_info_ixscan" in {
       seq_partition_info_ixscan should equal ("ArrayBuffer(sdb2:11910, sdb1:11910, sdb3:11910, sdb1:11930, sdb4:11910, sdb1:11920)")
   }
 }

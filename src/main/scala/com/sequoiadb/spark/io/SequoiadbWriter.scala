@@ -37,6 +37,7 @@ import scala.collection.JavaConversions._
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.StructType
 import org.bson.BSONObject
+import org.slf4j.{Logger, LoggerFactory}
 
 /**
  * SequoiaDB writer.
@@ -50,6 +51,7 @@ class SequoiadbWriter(config: SequoiadbConfig) extends Serializable {
   protected var ds : Option[SequoiadbDatasource] = None
   protected var connection : Option[Sequoiadb] = None
 
+  private var LOG: Logger = LoggerFactory.getLogger(this.getClass.getName())
     
   /**
    * Storing a bunch of SequoiaDB objects.
@@ -72,6 +74,7 @@ class SequoiadbWriter(config: SequoiadbConfig) extends Serializable {
       val cl = connection.get.getCollectionSpace(
           config[String](SequoiadbConfig.CollectionSpace)).getCollection(
               config[String](SequoiadbConfig.Collection))
+      LOG.info ("bulksize = " + config[String](SequoiadbConfig.BulkSize))
       // loop through it and perform batch insert
       // batch size is defined in SequoiadbConfig.BulkSize
       val list : ArrayList[BSONObject] = new ArrayList[BSONObject]()
@@ -79,7 +82,7 @@ class SequoiadbWriter(config: SequoiadbConfig) extends Serializable {
         val record = it.next
         val bsonrecord = SequoiadbRowConverter.rowAsDBObject ( record, schema )
         list.add(bsonrecord)
-        if ( list.size >= SequoiadbConfig.BulkSize ) {
+        if ( list.size >= config[String](SequoiadbConfig.BulkSize).toInt ) {
           cl.bulkInsert ( list, 0 )
           list.clear
         }
@@ -101,4 +104,5 @@ class SequoiadbWriter(config: SequoiadbConfig) extends Serializable {
     } // finally
   } // def save(it: Iterator[BSONObject]): Unit =
 }
+
 

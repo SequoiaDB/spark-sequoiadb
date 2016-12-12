@@ -424,9 +424,9 @@ case class SequoiadbPartitioner(
     } // finally
     
     
-    LOG.debug ("partition seq before, partition_list = " + SequoiadbPartitioner.getConnInfo (partition_list.get))
+    LOG.info ("partition seq before, partition_list = " + SequoiadbPartitioner.getConnInfo (partition_list.get))
     partition_list = SequoiadbPartitioner.seqPartitionList (partition_list)
-    LOG.debug ("partition seq over, partition_list = " + SequoiadbPartitioner.getConnInfo (partition_list.get))
+    LOG.info ("partition seq over, partition_list = " + SequoiadbPartitioner.getConnInfo (partition_list.get))
     partition_list.get
   }
 }

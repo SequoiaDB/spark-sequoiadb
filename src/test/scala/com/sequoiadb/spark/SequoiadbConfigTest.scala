@@ -39,6 +39,7 @@ with Matchers {
     private val password : String = "testpassword"
     private val preference : String = "M"
     private val scanType : String = "ixscan"
+    private val bulksize : String = "1024"
     
     "Config" should "be initialized successful" in {
       val testConfig = SequoiadbConfigBuilder()
@@ -50,6 +51,7 @@ with Matchers {
       .set(SequoiadbConfig.Password, "")
       .set(SequoiadbConfig.Preference, "")
       .set(SequoiadbConfig.ScanType, "")
+      .set(SequoiadbConfig.BulkSize, "")
       .build()
     }
 
@@ -63,6 +65,7 @@ with Matchers {
       .set(SequoiadbConfig.Password, password)
       .set(SequoiadbConfig.Preference, preference)
       .set(SequoiadbConfig.ScanType, scanType)
+      .set(SequoiadbConfig.BulkSize, bulksize)
       .build()
       testConfig.get[List[String]](SequoiadbConfig.Host).getOrElse("") should equal (List(host + ":" + port))
       testConfig.get[String](SequoiadbConfig.CollectionSpace).getOrElse("") should equal(collectionspace)
@@ -72,6 +75,7 @@ with Matchers {
       testConfig.get[String](SequoiadbConfig.Password).getOrElse("") should equal(password)
       testConfig.get[String](SequoiadbConfig.Preference).getOrElse("") should equal("{PreferedInstance:\"M\"}")
       testConfig.get[String](SequoiadbConfig.ScanType).getOrElse("") should equal(scanType)
+      testConfig.get[Integer](SequoiadbConfig.BulkSize).getOrElse("") should equal(bulksize)
     }
     
     it should "contains predefined default values" in {
@@ -84,6 +88,7 @@ with Matchers {
       .set(SequoiadbConfig.Password, "")
       .set(SequoiadbConfig.Preference, "")
       .set(SequoiadbConfig.ScanType, "")
+      .set(SequoiadbConfig.BulkSize, "-23")
       .build()
       testConfig.get[List[String]](SequoiadbConfig.Host).getOrElse("") should equal (List("localhost" + ":" + 11810))
       testConfig.get[String](SequoiadbConfig.CollectionSpace).getOrElse("") should equal(collectionspace)
@@ -93,6 +98,7 @@ with Matchers {
       testConfig.get[String](SequoiadbConfig.Password).getOrElse("") should equal("")
       testConfig.get[String](SequoiadbConfig.Preference).getOrElse("") should equal("{PreferedInstance:\"S\"}")
       testConfig.get[String](SequoiadbConfig.ScanType).getOrElse("") should equal("auto")
+      testConfig.get[Integer](SequoiadbConfig.BulkSize).getOrElse("") should equal("512")
     }
     
     it should "contains predefined default values 2" in {
@@ -105,6 +111,7 @@ with Matchers {
       .set(SequoiadbConfig.Password, "")
       .set(SequoiadbConfig.Preference, "g")
       .set(SequoiadbConfig.ScanType, "")
+      .set(SequoiadbConfig.BulkSize, "")
       .build()
       testConfig.get[String](SequoiadbConfig.Preference).getOrElse("") should equal("{PreferedInstance:\"S\"}")
     }
