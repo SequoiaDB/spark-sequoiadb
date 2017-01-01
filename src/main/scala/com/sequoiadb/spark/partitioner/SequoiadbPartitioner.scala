@@ -37,7 +37,10 @@ import com.sequoiadb.base.SequoiadbDatasource
 import com.sequoiadb.base.Sequoiadb
 import com.sequoiadb.base.DBQuery
 import com.sequoiadb.exception.BaseException
+// this. is for sdb 2.6 java driver
 import com.sequoiadb.exception.SDBErrorLookup
+// this is for sdb 2.8 java driver
+//import com.sequoiadb.exception.SDBError
 import org.bson.BSONObject
 import org.bson.BasicBSONObject
 import org.bson.types.BasicBSONList
@@ -89,7 +92,10 @@ case class SequoiadbPartitioner(
       // if we get SDB_RTN_COORD_ONLY error, that means we connect to standalone or data node
       // in that case we simply return null instead of throwing exception
       case ex: BaseException => {
+        // this is for sdb 2.6 java driver
         if ( ex.getErrorCode == SDBErrorLookup.getErrorCodeByType("SDB_RTN_COORD_ONLY")) {
+          // this is for sdb 2.8 java driver
+//        if ( SDBError.getSDBError(ex.getErrorCode)  == SDBError.SDB_RTN_COORD_ONLY) {
           None
         }
         else {
@@ -268,8 +274,7 @@ case class SequoiadbPartitioner(
       def getQueryMetaObj (clObject: DBCollection, queryObj: BSONObject): Array[BSONObject] = {
         val bson_list: ArrayBuffer[BSONObject] = ArrayBuffer[BSONObject]()
        
-//        val cursor = clObject.getQueryMeta(queryObj, null, null, 0, 0, 0)
-        val cursor = clObject.getQueryMeta(null, null, null, 0, 0, 0)
+        val cursor = clObject.getQueryMeta(queryObj, null, null, 0, -1, 0)
         while (cursor.hasNext) {
           val tmp = SequoiadbRowConverter.dbObjectToMap(cursor.getNext)
           for (block <- SequoiadbRowConverter.dbObjectToMap(tmp("Datablocks").asInstanceOf[BasicBSONList])){
@@ -356,7 +361,9 @@ case class SequoiadbPartitioner(
           ).explain (queryObj, null, null, null, 0, -1, 0, null)
       
       var breakValue = true
+      var IsExplainHaveValue = false
       while ( cursor.hasNext && breakValue ) {
+        IsExplainHaveValue = true
         // note each row represent a group
         val row = SequoiadbRowConverter.dbObjectToMap(cursor.getNext)
         if ( row.contains("SubCollections") ) {
@@ -374,12 +381,17 @@ case class SequoiadbPartitioner(
         }
       }
       cursor.close
+      // if explain is NULL, then return List[NULL]
+      if (!IsExplainHaveValue) {
+        val partition_none: ArrayBuffer[SequoiadbPartition] = ArrayBuffer[SequoiadbPartition]()
+        return partition_none.toArray
+      }
       
       val checkScanType = config[String](SequoiadbConfig.ScanType)
       if (!checkScanType.equalsIgnoreCase("ixscan") &&
           !checkScanType.equalsIgnoreCase("tbscan") &&
           !checkScanType.equalsIgnoreCase("auto")) {
-        LOG.info ("Config's scanType = " + checkScanType + ", we will set scanType = auto")
+        LOG.warn ("Config's scanType = " + checkScanType + ", we will set scanType = auto")
       }
       else {
         LOG.info ("Config's scanType = " + checkScanType)

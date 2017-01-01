@@ -240,17 +240,20 @@ object SequoiadbReader {
       }
       case StringStartsWith(attribute, _value) =>{
         val value = changeJavaMathBigDecimalType (_value)
-        val subobj: Pattern = Pattern.compile("^" + value,Pattern.CASE_INSENSITIVE);
+        // do not set options
+        val subobj: Pattern = Pattern.compile("^" + value + ".*");
         obj.put (attribute,subobj)
       }
       case StringEndsWith(attribute, _value) =>{
         val value = changeJavaMathBigDecimalType (_value)
-        val subobj: Pattern = Pattern.compile(value + "$",Pattern.CASE_INSENSITIVE);
+        // do not set options
+        val subobj: Pattern = Pattern.compile(".*" + value + "$");
         obj.put (attribute,subobj)
       }
       case StringContains(attribute, _value) =>{
         val value = changeJavaMathBigDecimalType (_value)
-        val subobj: Pattern = Pattern.compile(".*" + value + ".*",Pattern.CASE_INSENSITIVE);
+        // do not set options
+        val subobj: Pattern = Pattern.compile(".*" + value + ".*");
         obj.put (attribute,subobj)
       }
     }
