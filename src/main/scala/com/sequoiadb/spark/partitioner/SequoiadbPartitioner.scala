@@ -274,8 +274,7 @@ case class SequoiadbPartitioner(
       def getQueryMetaObj (clObject: DBCollection, queryObj: BSONObject): Array[BSONObject] = {
         val bson_list: ArrayBuffer[BSONObject] = ArrayBuffer[BSONObject]()
        
-//        val cursor = clObject.getQueryMeta(queryObj, null, null, 0, 0, 0)
-        val cursor = clObject.getQueryMeta(null, null, null, 0, 0, 0)
+        val cursor = clObject.getQueryMeta(queryObj, null, null, 0, -1, 0)
         while (cursor.hasNext) {
           val tmp = SequoiadbRowConverter.dbObjectToMap(cursor.getNext)
           for (block <- SequoiadbRowConverter.dbObjectToMap(tmp("Datablocks").asInstanceOf[BasicBSONList])){
