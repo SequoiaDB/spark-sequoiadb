@@ -44,6 +44,7 @@ import org.apache.spark.sql.sources.Filter
 import java.util.ArrayList
 import org.slf4j.{Logger, LoggerFactory}
 import com.sequoiadb.net.ConfigOptions
+import com.sequoiadb.spark.io.SequoiadbReader
 
 /**
  * A SequoiaDB baseRelation that can eliminate unneeded columns
@@ -80,7 +81,11 @@ case class SequoiadbRelation(
       SequoiadbRDD(
         sqlContext,
         config,
-        Option(rddPartitioner)),
+        Option(rddPartitioner),
+        Array(),
+        Array(),
+        SequoiadbConfig.QUERYRETURNBSON,
+        100),
       config[Double](SequoiadbConfig.SamplingRatio)).schema()
 
   /**
@@ -89,7 +94,6 @@ case class SequoiadbRelation(
    */
   override val schema: StructType = schemaProvided.getOrElse(lazySchema)
 
-  // TODO
   // return a Array[NULL], then spark sql will not longer filter the results returned by sdb 
   override def unhandledFilters(filters: Array[Filter]): Array[Filter] = {
     val filters_arr = Array[Filter]()
@@ -108,14 +112,34 @@ case class SequoiadbRelation(
     requiredColumns : Array[String],
     filters : Array[Filter]): RDD[Row] = {
 
-    val rdd = SequoiadbRDD(
-      sqlContext,
-      config,
-      Option(rddPartitioner),
-      requiredColumns,
-      filters)
+    
+    var rdd : Option[SequoiadbRDD] = None
+      
+    val haveSpecialDataType = SequoiadbRowConverter.haveSpecialDataType(schema)
 
-    SequoiadbRowConverter.asRow(pruneSchema(schema, requiredColumns), rdd)
+    // selector have speciel data type , so query in normal
+    if (haveSpecialDataType) {
+      rdd = Option(SequoiadbRDD(
+        sqlContext,
+        config,
+        Option(rddPartitioner),
+        requiredColumns,
+        filters,
+        SequoiadbConfig.QUERYRETURNBSON)
+        )
+    }
+    // selector is simple , so query in speciel
+    else {
+      rdd = Option(SequoiadbRDD(
+        sqlContext,
+        config,
+        Option(rddPartitioner),
+        requiredColumns,
+        filters,
+        SequoiadbConfig.QUERYRETURNCSV)
+        )
+    }
+    SequoiadbRowConverter.asRow(pruneSchema(schema, requiredColumns), haveSpecialDataType, rdd.get)
   }
 
   /**

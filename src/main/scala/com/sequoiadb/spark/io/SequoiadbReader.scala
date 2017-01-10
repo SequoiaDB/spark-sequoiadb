@@ -36,6 +36,7 @@ import org.bson.BSONObject
 import org.bson.BasicBSONObject
 import org.bson.types.BasicBSONList
 import com.sequoiadb.base.DBCursor
+import com.sequoiadb.base.DBQuery
 import com.sequoiadb.base.SequoiadbDatasource
 import com.sequoiadb.base.Sequoiadb
 import scala.collection.JavaConversions._
@@ -50,11 +51,15 @@ import org.bson.types.BSONDecimal
  * @param config Configuration object.
  * @param requiredColumns Pruning fields
  * @param filters Added query filters
+ * @param query return data type, 0 = data in bson, 1 = data in csv
+ * @param query limit number, default -1 (query all data)
  */
 class SequoiadbReader(
   config: SequoiadbConfig,
   requiredColumns: Array[String],
-  filters: Array[Filter]) {
+  filters: Array[Filter],
+  queryReturnType: Int = SequoiadbConfig.QUERYRETURNBSON,
+  queryLimit: Long = -1) {
 
   
   private var LOG: Logger = LoggerFactory.getLogger(this.getClass.getName())
@@ -90,7 +95,7 @@ class SequoiadbReader(
    * @param partition Where to read from
    */
   def init(partition: Partition): Unit = {
-//    var out: FileOutputStream = new FileOutputStream ("/root/software/spark-2.0-hadoop2.6/logs/test.txt");;
+//    var out: FileOutputStream = new FileOutputStream ("/root/software/spark-2.0-hadoop2.6/logs/test.txt", true);
 //    out.write ("enter SequoiadbReader.init function\n".getBytes)
     // convert from Spark Partition to SequoiadbPartition
     val sdbPartition = partition.asInstanceOf[SequoiadbPartition]
@@ -127,7 +132,10 @@ class SequoiadbReader(
             SequoiadbReader.queryPartition(filters),
             SequoiadbReader.selectFields(requiredColumns),
             null,
-            metaObj))
+            metaObj,
+            0,
+            queryLimit,
+            queryReturnType))
 
       }
       else if (sdbPartition.scanType.equals(SequoiadbConfig.scanTypeExplain)){
@@ -136,7 +144,10 @@ class SequoiadbReader(
             SequoiadbReader.queryPartition(filters),
             SequoiadbReader.selectFields(requiredColumns),
             null,
-            null))
+            null,
+            0,
+            queryLimit,
+            queryReturnType))
 
         
       }

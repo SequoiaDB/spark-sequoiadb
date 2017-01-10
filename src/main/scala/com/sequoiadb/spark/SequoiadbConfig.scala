@@ -30,6 +30,7 @@ package com.sequoiadb.spark
 
 import _root_.com.sequoiadb.spark.SequoiadbConfig.Property
 import scala.reflect.ClassTag
+import com.sequoiadb.base.DBQuery
 
 case class SequoiadbConfigBuilder(
   val properties: Map[Property,Any] = Map()) extends Serializable { build =>
@@ -149,6 +150,8 @@ object SequoiadbConfig {
   val BulkSize        = "bulksize"    // default 512
   val scanTypeExplain = 0
   val scanTypeGetQueryMeta = 1
+  val QUERYRETURNBSON = 0
+  val QUERYRETURNCSV = DBQuery.FLG_QUERY_STRINGOUT
 
   val all = List(
     Host,

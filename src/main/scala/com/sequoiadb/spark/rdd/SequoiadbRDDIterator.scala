@@ -43,13 +43,17 @@ import org.slf4j.{Logger, LoggerFactory}
  * @param config Configuration object.
  * @param requiredColumns Pruning fields
  * @param filters Added query filters
+ * @param query return data type, 0 = data in bson, 1 = data in csv
+ * @param query limit number, default -1 (query all data)
  */
 class SequoiadbRDDIterator(
   taskContext: TaskContext,
   partition: Partition,
   config: SequoiadbConfig,
   requiredColumns: Array[String],
-  filters: Array[Filter])
+  filters: Array[Filter],
+  queryReturnType: Int = SequoiadbConfig.QUERYRETURNBSON,
+  queryLimit: Long = -1)
   extends Iterator[BSONObject] {
 
   
@@ -92,7 +96,7 @@ class SequoiadbRDDIterator(
   }
 
   def initReader() = {
-    val reader = new SequoiadbReader(config,requiredColumns,filters)
+    val reader = new SequoiadbReader(config,requiredColumns,filters, queryReturnType, queryLimit)
     reader.init(partition)
     reader
   }
