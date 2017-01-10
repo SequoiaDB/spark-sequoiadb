@@ -40,6 +40,7 @@ import com.sequoiadb.exception.BaseException
 import com.sequoiadb.base.SequoiadbDatasource
 import com.sequoiadb.spark.util.ConnectionUtil
 import com.sequoiadb.base.Sequoiadb
+import org.apache.spark.sql.sources.Filter
 import java.util.ArrayList
 import org.slf4j.{Logger, LoggerFactory}
 import com.sequoiadb.net.ConfigOptions
@@ -89,7 +90,14 @@ case class SequoiadbRelation(
   override val schema: StructType = schemaProvided.getOrElse(lazySchema)
 
   // TODO
-  override def unhandledFilters(filters: Array[Filter]): Array[Filter] = filters
+  // return a Array[NULL], then spark sql will not longer filter the results returned by sdb 
+  override def unhandledFilters(filters: Array[Filter]): Array[Filter] = {
+    val filters_arr = Array[Filter]()
+    filters_arr
+  }
+  
+  //TODO
+//  override def sizeInBytes: Long = sqlContext.conf.defaultSizeInBytes
   
   /**
    * Override build scan function that takes requiredColumns and filters as input
