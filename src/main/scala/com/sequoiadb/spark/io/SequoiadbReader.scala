@@ -194,7 +194,6 @@ object SequoiadbReader {
      */
     def initFilterObj (obj: BSONObject, attribute: String, subobj: Any): BSONObject = {
       val retrunObj : BSONObject = new BasicBSONObject ()
-      LOG.info ("enter initFilterObj, obj = " + obj.toString)
       if (obj.containsField("$and")) {
         val tmpArr = obj.get ("$and").asInstanceOf [BasicBSONList]
         val tmpObj : BSONObject = new BasicBSONObject ()
@@ -332,22 +331,18 @@ object SequoiadbReader {
         val value = changeJavaMathBigDecimalType (_value)
         subobj.put("$et", value)
         obj = initFilterObj (obj, attribute, subobj)
-        
-        LOG.info ("et " + obj.toString)
       }
       case GreaterThan(attribute, _value) => {
         val subobj : BSONObject = new BasicBSONObject
         val value = changeJavaMathBigDecimalType (_value)
         subobj.put("$gt", value)
         obj = initFilterObj (obj, attribute, subobj)
-        LOG.info ("gt " + obj.toString)
       }
       case GreaterThanOrEqual(attribute, _value) => {
         val subobj : BSONObject = new BasicBSONObject
         val value = changeJavaMathBigDecimalType (_value)
         subobj.put("$gte", value)
         obj = initFilterObj (obj, attribute, subobj)
-        LOG.info ("gte " + obj.toString)
       }
       case In(attribute, values) => {
         val subobj : BSONObject = new BasicBSONObject
@@ -355,74 +350,63 @@ object SequoiadbReader {
         Array.tabulate(values.length){ i => arr.put(""+i, changeJavaMathBigDecimalType (values(i)))}
         subobj.put("$in", arr)
         obj = initFilterObj (obj, attribute, subobj)
-        LOG.info ("in " + obj.toString)
       }
       case LessThan(attribute, _value) => {
         val subobj : BSONObject = new BasicBSONObject
         val value = changeJavaMathBigDecimalType (_value)
         subobj.put("$lt", value)
         obj = initFilterObj (obj, attribute, subobj)
-        LOG.info ("lt " + obj.toString)
       }
       case LessThanOrEqual(attribute, _value) => {
         val subobj : BSONObject = new BasicBSONObject
         val value = changeJavaMathBigDecimalType (_value)
         subobj.put("$lte", value)
         obj = initFilterObj (obj, attribute, subobj)
-        LOG.info ("lte " + obj.toString)
       }
       case IsNull(attribute) => {
         val subobj : BSONObject = new BasicBSONObject
         subobj.put("$isnull", 1)
         obj = initFilterObj (obj, attribute, subobj)
-        LOG.info ("isnull " + obj.toString)
       }
       case IsNotNull(attribute) => {
         val subobj : BSONObject = new BasicBSONObject
         subobj.put("$isnull", 0)
         obj = initFilterObj (obj, attribute, subobj)
-        LOG.info ("isnotnull " + obj.toString)
       }
       case And(left, right) => {
         val leftCond : BSONObject = queryPartition ( Array(left) )
         val rightCond : BSONObject = queryPartition ( Array(right) )
         obj = initFilterObjForAND (leftCond, rightCond)
-        LOG.info ("and " + obj.toString)
       }
       case Or(left, right) => {
         val leftCond : BSONObject = queryPartition ( Array(left) )
         val rightCond : BSONObject = queryPartition ( Array(right) )
         val arr : BSONObject = new BasicBSONList
         obj = initFilterObjForOR (leftCond, rightCond)
-        LOG.info ("or " + obj.toString)
       }
       case Not(child) =>{
         val notCond : BSONObject = queryPartition ( Array(child) )
         val arr : BSONObject = new BasicBSONList
         arr.put ( "0", notCond )
         obj.put ( "$not",arr )
-        LOG.info ("not " + obj.toString)
       }
       case StringStartsWith(attribute, _value) =>{
         val value = changeJavaMathBigDecimalType (_value)
         // do not set options
         val subobj: Pattern = Pattern.compile("^" + value + ".*");
         obj = initFilterObj (obj, attribute, subobj)
-        LOG.info ("startwith " + obj.toString)
       }
       case StringEndsWith(attribute, _value) =>{
         val value = changeJavaMathBigDecimalType (_value)
         // do not set options
         val subobj: Pattern = Pattern.compile(".*" + value + "$");
         obj = initFilterObj (obj, attribute, subobj)
-        LOG.info ("endwith " + obj.toString)
       }
       case StringContains(attribute, _value) =>{
         val value = changeJavaMathBigDecimalType (_value)
         // do not set options
         val subobj: Pattern = Pattern.compile(".*" + value + ".*");
         obj = initFilterObj (obj, attribute, subobj)
-        LOG.info ("contains " + obj.toString)
       }
     }
     obj
