@@ -46,6 +46,7 @@ import org.bson.util.JSON
 import java.util.regex.Pattern
 import org.bson.types.BSONDecimal
 
+
 /**
  *
  * @param config Configuration object.
@@ -62,7 +63,7 @@ class SequoiadbReader(
   queryLimit: Long = -1) {
 
   
-  private var LOG: Logger = LoggerFactory.getLogger(this.getClass.getName())
+  
   private var dbConnectionPool : Option[SequoiadbDatasource] = None
   private var dbConnection : Option[Sequoiadb] = None
   private var dbCursor : Option[DBCursor] = None
@@ -162,7 +163,13 @@ class SequoiadbReader(
   }
 }
 
+class SequoiadbFilter extends  Filter {
+  
+}
+
+
 object SequoiadbReader {
+  private var LOG: Logger = LoggerFactory.getLogger(this.getClass.getName())
   
   /**
    * Create query partition using given filters.
@@ -172,100 +179,250 @@ object SequoiadbReader {
    */
   def queryPartition ( filters: Array[Filter]): BSONObject = {
     
+    /*
+     * when value's data type = BigDecimal, then filter in BSON will chose BSONDecimal
+     */
     def changeJavaMathBigDecimalType (value: Any): Any = {
       value match {
         case value: java.math.BigDecimal => new BSONDecimal (value.asInstanceOf[java.math.BigDecimal].toString())
         case _ => value
       }
     }
-    val obj : BSONObject = new BasicBSONObject
+    
+    /*
+     * init filter in BSON, but do not include OR and AND filters
+     */
+    def initFilterObj (obj: BSONObject, attribute: String, subobj: Any): BSONObject = {
+      val retrunObj : BSONObject = new BasicBSONObject ()
+      LOG.info ("enter initFilterObj, obj = " + obj.toString)
+      if (obj.containsField("$and")) {
+        val tmpArr = obj.get ("$and").asInstanceOf [BasicBSONList]
+        val tmpObj : BSONObject = new BasicBSONObject ()
+        tmpObj.put (attribute, subobj)
+        tmpArr.add (tmpObj)
+                
+        obj.put ("$and", tmpArr)
+        retrunObj.putAll(obj)
+      } else if (obj.containsField(attribute)){
+        val tmpArr = new BasicBSONList ()
+        val leftCond = obj
+        val rightCond = new BasicBSONObject ()
+        
+        rightCond.put (attribute, subobj)
+        
+        tmpArr.add (leftCond)
+        tmpArr.add (rightCond)
+        retrunObj.put ("$and", tmpArr)
+      } else {
+        obj.put (attribute, subobj)
+        retrunObj.putAll(obj)
+      }
+      
+      retrunObj
+    }
+    
+    /*
+     * init filter in BSON, but just deal with AND filters
+     */
+    def initFilterObjForAND (left: BSONObject, right: BSONObject): BSONObject = {
+      var obj : BSONObject = new BasicBSONObject ()
+      if (left.containsField("$and") && right.containsField("$and")) {
+        val tmpArr = new BasicBSONList()
+        left.get ("$and").asInstanceOf [BasicBSONList].foreach {
+          case value:BSONObject => {
+            tmpArr.add (value)
+          }
+        }
+        
+        right.get ("$and").asInstanceOf [BasicBSONList].foreach {
+          case value:BSONObject => {
+            tmpArr.add (value)
+          }
+        }
+        obj.put ("$and", tmpArr)
+      }
+      else if (left.containsField("$or") || right.containsField("$or")){
+        val tmpArr = new BasicBSONList()
+        tmpArr.add (left)
+        tmpArr.add (right)
+        obj.put ("$and", tmpArr)
+      }
+      else if (left.containsField("$and") && !right.containsField("$and")){
+        var tmpObj : BSONObject = new BasicBSONObject ()
+        for (key <- right.keySet().toArray()) {
+          tmpObj = initFilterObj (left, 
+                                  key.asInstanceOf [String], 
+                                  right.get (key.asInstanceOf [String])
+                                  )
+        }
+        obj = tmpObj
+      }
+      else if (!left.containsField("$and") && right.containsField("$and")){
+        var tmpObj : BSONObject = new BasicBSONObject ()
+        for (key <- left.keySet().toArray()) {
+          tmpObj = initFilterObj (right, 
+                                  key.asInstanceOf [String], 
+                                  left.get (key.asInstanceOf [String])
+                                  )
+        }
+        obj = tmpObj
+      }
+      else {
+        var tmpObj : BSONObject = new BasicBSONObject ()
+        for (key <- right.keySet().toArray()) {
+          tmpObj = initFilterObj (left, 
+                                  key.asInstanceOf [String], 
+                                  right.get (key.asInstanceOf [String])
+                                  )
+        }
+        obj = tmpObj
+      }
+
+      obj
+    }
+    
+    /*
+     * init filter in BSON, but just deal with OR filters
+     */
+    def initFilterObjForOR (left: BSONObject, right: BSONObject): BSONObject = {
+      var obj : BSONObject = new BasicBSONObject ()
+      
+      if (left.containsField("$or") && right.containsField("$or")) {
+        val tmpArr = new BasicBSONList()
+        left.get ("$or").asInstanceOf [BasicBSONList].foreach {
+          case value:BSONObject => {
+            tmpArr.add (value)
+          }
+        }
+        
+        right.get ("$or").asInstanceOf [BasicBSONList].foreach {
+          case value:BSONObject => {
+            tmpArr.add (value)
+          }
+        }
+        obj.put ("$or", tmpArr)
+      }
+      else if (left.containsField("$or") && !right.containsField("$or")) {
+        val tmpArr = left.get ("$or").asInstanceOf [BasicBSONList]
+        tmpArr.add (right)
+        obj = left
+        obj.put ("$or", tmpArr)
+      }
+      else if (!left.containsField("$or") && right.containsField("$or")) {
+        val tmpArr = right.get ("$or").asInstanceOf [BasicBSONList]
+        tmpArr.add (left)
+        obj = right
+        obj.put ("$or", tmpArr)
+      }
+      else {
+        val tmpArr = new BasicBSONList()
+        tmpArr.add (left)
+        tmpArr.add (right)
+        
+        obj.put ("$or", tmpArr)
+      }
+      
+      obj
+    }
+    
+    var obj : BSONObject = new BasicBSONObject
     filters.foreach {
       case EqualTo(attribute, _value) => {
         val subobj : BSONObject = new BasicBSONObject
         val value = changeJavaMathBigDecimalType (_value)
         subobj.put("$et", value)
-        obj.put(attribute,subobj)
+        obj = initFilterObj (obj, attribute, subobj)
+        
+        LOG.info ("et " + obj.toString)
       }
       case GreaterThan(attribute, _value) => {
         val subobj : BSONObject = new BasicBSONObject
         val value = changeJavaMathBigDecimalType (_value)
         subobj.put("$gt", value)
-        obj.put(attribute,subobj)
+        obj = initFilterObj (obj, attribute, subobj)
+        LOG.info ("gt " + obj.toString)
       }
       case GreaterThanOrEqual(attribute, _value) => {
         val subobj : BSONObject = new BasicBSONObject
         val value = changeJavaMathBigDecimalType (_value)
         subobj.put("$gte", value)
-        obj.put(attribute,subobj)
+        obj = initFilterObj (obj, attribute, subobj)
+        LOG.info ("gte " + obj.toString)
       }
       case In(attribute, values) => {
         val subobj : BSONObject = new BasicBSONObject
         val arr : BSONObject = new BasicBSONList
         Array.tabulate(values.length){ i => arr.put(""+i, changeJavaMathBigDecimalType (values(i)))}
         subobj.put("$in", arr)
-        obj.put(attribute,subobj)
+        obj = initFilterObj (obj, attribute, subobj)
+        LOG.info ("in " + obj.toString)
       }
       case LessThan(attribute, _value) => {
         val subobj : BSONObject = new BasicBSONObject
         val value = changeJavaMathBigDecimalType (_value)
         subobj.put("$lt", value)
-        obj.put(attribute,subobj)
+        obj = initFilterObj (obj, attribute, subobj)
+        LOG.info ("lt " + obj.toString)
       }
       case LessThanOrEqual(attribute, _value) => {
         val subobj : BSONObject = new BasicBSONObject
         val value = changeJavaMathBigDecimalType (_value)
         subobj.put("$lte", value)
-        obj.put(attribute,subobj)
+        obj = initFilterObj (obj, attribute, subobj)
+        LOG.info ("lte " + obj.toString)
       }
       case IsNull(attribute) => {
         val subobj : BSONObject = new BasicBSONObject
         subobj.put("$isnull", 1)
-        obj.put(attribute,subobj)
+        obj = initFilterObj (obj, attribute, subobj)
+        LOG.info ("isnull " + obj.toString)
       }
       case IsNotNull(attribute) => {
         val subobj : BSONObject = new BasicBSONObject
         subobj.put("$isnull", 0)
-        obj.put(attribute,subobj)
+        obj = initFilterObj (obj, attribute, subobj)
+        LOG.info ("isnotnull " + obj.toString)
       }
       case And(left, right) => {
         val leftCond : BSONObject = queryPartition ( Array(left) )
         val rightCond : BSONObject = queryPartition ( Array(right) )
-        val arr : BSONObject = new BasicBSONList
-        arr.put ( "0", leftCond )
-        arr.put ( "1", rightCond )
-        obj.put ( "$and",arr )
+        obj = initFilterObjForAND (leftCond, rightCond)
+        LOG.info ("and " + obj.toString)
       }
       case Or(left, right) => {
         val leftCond : BSONObject = queryPartition ( Array(left) )
         val rightCond : BSONObject = queryPartition ( Array(right) )
         val arr : BSONObject = new BasicBSONList
-        arr.put ( "0", leftCond )
-        arr.put ( "1", rightCond )
-        obj.put ( "$or",arr )
+        obj = initFilterObjForOR (leftCond, rightCond)
+        LOG.info ("or " + obj.toString)
       }
       case Not(child) =>{
         val notCond : BSONObject = queryPartition ( Array(child) )
         val arr : BSONObject = new BasicBSONList
         arr.put ( "0", notCond )
         obj.put ( "$not",arr )
+        LOG.info ("not " + obj.toString)
       }
       case StringStartsWith(attribute, _value) =>{
         val value = changeJavaMathBigDecimalType (_value)
         // do not set options
         val subobj: Pattern = Pattern.compile("^" + value + ".*");
-        obj.put (attribute,subobj)
+        obj = initFilterObj (obj, attribute, subobj)
+        LOG.info ("startwith " + obj.toString)
       }
       case StringEndsWith(attribute, _value) =>{
         val value = changeJavaMathBigDecimalType (_value)
         // do not set options
         val subobj: Pattern = Pattern.compile(".*" + value + "$");
-        obj.put (attribute,subobj)
+        obj = initFilterObj (obj, attribute, subobj)
+        LOG.info ("endwith " + obj.toString)
       }
       case StringContains(attribute, _value) =>{
         val value = changeJavaMathBigDecimalType (_value)
         // do not set options
         val subobj: Pattern = Pattern.compile(".*" + value + ".*");
-        obj.put (attribute,subobj)
+        obj = initFilterObj (obj, attribute, subobj)
+        LOG.info ("contains " + obj.toString)
       }
     }
     obj
