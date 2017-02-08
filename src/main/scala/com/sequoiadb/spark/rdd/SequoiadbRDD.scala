@@ -28,13 +28,17 @@ import scala.collection.mutable.ArrayBuffer
  * @param partitioner Sequoiadb Partitioner object
  * @param requiredColumns Fields to project
  * @param filters Query filters
+ * @param query return data type, 0 = data in bson, 1 = data in csv
+ * @param query limit number, default -1 (query all data)
  */
 class SequoiadbRDD(
   sc: SparkContext,
   config: SequoiadbConfig,
   partitioner: Option[SequoiadbPartitioner] = None,
   requiredColumns: Array[String] = Array(),
-  filters: Array[Filter] = Array())
+  filters: Array[Filter] = Array(),
+  queryReturnType: Int,
+  queryLimit: Long = -1)
   extends RDD[BSONObject](sc, deps = Nil) {
 
 
@@ -62,26 +66,33 @@ class SequoiadbRDD(
       split.asInstanceOf[SequoiadbPartition],
       config,
       requiredColumns,
-      filters)
+      filters,
+      queryReturnType,
+      queryLimit)
   }
 
 }
 
 object SequoiadbRDD {
+
   /**
    * @param sc Spark SQLContext
    * @param config Config parameters
    * @param partitioner Sequoiadb Partitioner object
    * @param requiredColumns Fields to project
    * @param filters Query filters
+   * @param query return data type, 0 = data in bson, 1 = data in csv
+   * @param query limit number, default -1 (query all data)
    */
   def apply (
     sc: SQLContext,
     config: SequoiadbConfig,
     partitioner: Option[SequoiadbPartitioner] = None,
     requiredColumns: Array[String] = Array(),
-    filters: Array[Filter] = Array()) = {
+    filters: Array[Filter] = Array(),
+    queryReturnType: Int = SequoiadbConfig.QUERYRETURNBSON,
+    queryLimit: Long = -1) = {
     new SequoiadbRDD ( sc.sparkContext, config, partitioner,
-      requiredColumns, filters )
+      requiredColumns, filters, queryReturnType, queryLimit)
   }
 }

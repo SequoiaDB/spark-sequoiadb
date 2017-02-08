@@ -30,6 +30,9 @@ package com.sequoiadb.spark
 
 import _root_.com.sequoiadb.spark.SequoiadbConfig.Property
 import scala.reflect.ClassTag
+import com.sequoiadb.base.DBQuery
+import org.bson.util.JSON
+import org.bson.BSONObject
 
 case class SequoiadbConfigBuilder(
   val properties: Map[Property,Any] = Map()) extends Serializable { build =>
@@ -74,6 +77,8 @@ case class SequoiadbConfigBuilder(
 
 class SequoiadbConfig (
   val properties: Map[Property,Any] = Map()) extends Serializable {
+  
+  
 
   /**
    * Gets specified property from current configuration object
@@ -103,6 +108,8 @@ class SequoiadbConfig (
         case "5" => "5"
         case "6" => "6"
         case "7" => "7"
+        case "r" => "r"
+        case "R" => "r"
         case _   => SequoiadbConfig.DefaultPreference
       }
       return Option (
@@ -119,6 +126,8 @@ class SequoiadbConfig (
     }
     t
   }
+  
+  
 
   /**
    * Gets specified property from current configuration object.
@@ -142,13 +151,15 @@ object SequoiadbConfig {
   val CollectionSpace = "collectionspace"
   val Collection      = "collection"
   val SamplingRatio   = "samplingRatio"
-  val Preference      = "preference"  // "m"/"M"/"s"/"S"/"a"/"A"/"1-7"
+  val Preference      = "preference"  // "m"/"M"/"s"/"S"/"a"/"A"/"1-7"/"r"/"R"
   val Username        = "username"
   val Password        = "password"
   val ScanType        = "scantype"    // auto/ixscan/tbscan
   val BulkSize        = "bulksize"    // default 512
   val scanTypeExplain = 0
   val scanTypeGetQueryMeta = 1
+  val QUERYRETURNBSON = 0
+  val QUERYRETURNCSV = DBQuery.FLG_QUERY_STRINGOUT
 
   val all = List(
     Host,
@@ -165,7 +176,7 @@ object SequoiadbConfig {
   //  Default values
 
   val DefaultSamplingRatio = 1.0
-  val DefaultPreference = "S"
+  val DefaultPreference = "r"
   val DefaultPort = "11810"
   val DefaultHost = "localhost"
   val DefaultUsername = ""
@@ -182,4 +193,7 @@ object SequoiadbConfig {
     Password -> (DefaultPassword),
     BulkSize -> (DefaultBulkSize)
     )
+    
+   
+  
 }

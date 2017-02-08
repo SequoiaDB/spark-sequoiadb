@@ -56,4 +56,20 @@ object ConnectionUtil {
       case ex: Exception => throw new BaseException ( "SDB_INVALIDARG" )
     }
   }
+  
+  /*
+   * Gets sdb connect preference option object string.
+   * if PreferedInstance = "r" then change PreferedInstance = "A"
+   * @return object string
+   */
+  def getPreferenceStr (preference: String) : String = {
+    val preferenceObj = getPreferenceObj ( preference )
+    if ( (preferenceObj.get("PreferedInstance").asInstanceOf[String])
+        .equalsIgnoreCase("r")
+        ) {
+      preferenceObj.put ("PreferedInstance", "A");
+    }
+    return preferenceObj.toString
+  
+  }
 }
