@@ -45,6 +45,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.bson.util.JSON
 import java.util.regex.Pattern
 import org.bson.types.BSONDecimal
+import scala.collection.mutable.ArrayBuffer
 
 
 /**
@@ -101,10 +102,45 @@ class SequoiadbReader(
     // convert from Spark Partition to SequoiadbPartition
     val sdbPartition = partition.asInstanceOf[SequoiadbPartition]
     try {
+      val _hostList = sdbPartition.hosts.map{it=>it.toString}
+      val hostList : ArrayBuffer[String] = new ArrayBuffer[String] ()
+      
+      // only one host string by random
+      hostList += _hostList.get((new util.Random).nextInt(_hostList.size))
+      
+      val preferenceObj = ConnectionUtil.getPreferenceObj (
+                                              ConnectionUtil.getPreferenceStr(
+                                                  config[String](SequoiadbConfig.Preference)
+                                                  )
+                                         )
+      
+      if ( (preferenceObj
+          .get("PreferedInstance").asInstanceOf[String])
+          .equalsIgnoreCase("r")
+         ) {
+        // For now let's simply turn the selection to sdbdatasource
+        dbConnectionPool = Option ( new SequoiadbDatasource (
+          // use the hosts for the given partition
+          hostList,
+          config[String](SequoiadbConfig.Username),
+          config[String](SequoiadbConfig.Password),
+          ConnectionUtil.initConfigOptions,
+          ConnectionUtil.initSequoiadbOptions ) )
+      } 
+      else {
+        // For now let's simply turn the selection to sdbdatasource
+        dbConnectionPool = Option ( new SequoiadbDatasource (
+          // use the hosts for the given partition
+          sdbPartition.hosts.map{it=>it.toString},
+          config[String](SequoiadbConfig.Username),
+          config[String](SequoiadbConfig.Password),
+          ConnectionUtil.initConfigOptions,
+          ConnectionUtil.initSequoiadbOptions ) )
+      }
       // For now let's simply turn the selection to sdbdatasource
       dbConnectionPool = Option ( new SequoiadbDatasource (
           // use the hosts for the given partition
-          sdbPartition.hosts.map{it=>it.toString},
+          hostList,
           config[String](SequoiadbConfig.Username),
           config[String](SequoiadbConfig.Password),
           ConnectionUtil.initConfigOptions,
@@ -112,8 +148,6 @@ class SequoiadbReader(
       // pickup a connection
       val connection = dbConnectionPool.get.getConnection
       
-      connection.setSessionAttr(
-          ConnectionUtil.getPreferenceObj(config[String](SequoiadbConfig.Preference)))
       // get collection space
       val cs = connection.getCollectionSpace(sdbPartition.collection.collectionspace)
       // get collection

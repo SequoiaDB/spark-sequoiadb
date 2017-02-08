@@ -115,7 +115,8 @@ case class SequoiadbRelation(
     
     var rdd : Option[SequoiadbRDD] = None
       
-    val haveSpecialDataType = SequoiadbRowConverter.haveSpecialDataType(schema)
+//    val haveSpecialDataType = SequoiadbRowConverter.haveSpecialDataType(schema)
+    val haveSpecialDataType = true
 
     // selector have speciel data type , so query in normal
     if (haveSpecialDataType) {

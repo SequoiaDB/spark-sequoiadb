@@ -96,7 +96,7 @@ with Matchers {
       testConfig.get[Float](SequoiadbConfig.SamplingRatio).getOrElse("") should equal(1.0)
       testConfig.get[String](SequoiadbConfig.Username).getOrElse("") should equal("")
       testConfig.get[String](SequoiadbConfig.Password).getOrElse("") should equal("")
-      testConfig.get[String](SequoiadbConfig.Preference).getOrElse("") should equal("{PreferedInstance:\"S\"}")
+      testConfig.get[String](SequoiadbConfig.Preference).getOrElse("") should equal("{PreferedInstance:\"r\"}")
       testConfig.get[String](SequoiadbConfig.ScanType).getOrElse("") should equal("auto")
       testConfig.get[Integer](SequoiadbConfig.BulkSize).getOrElse("") should equal("512")
     }
@@ -113,7 +113,7 @@ with Matchers {
       .set(SequoiadbConfig.ScanType, "")
       .set(SequoiadbConfig.BulkSize, "")
       .build()
-      testConfig.get[String](SequoiadbConfig.Preference).getOrElse("") should equal("{PreferedInstance:\"S\"}")
+      testConfig.get[String](SequoiadbConfig.Preference).getOrElse("") should equal("{PreferedInstance:\"r\"}")
     }
     
     

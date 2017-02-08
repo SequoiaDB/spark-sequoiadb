@@ -105,6 +105,8 @@ case class SequoiadbPartitioner(
       case ex: Exception => throw SequoiadbException(ex.getMessage,ex)
     }
   }
+  
+  
 
   /**
    * Convert rg_list to replication group map
@@ -157,8 +159,14 @@ case class SequoiadbPartitioner(
           ConnectionUtil.initSequoiadbOptions ))
       // pickup a connection
       connection = Option(ds.get.getConnection)
-      connection.get.setSessionAttr(
-          ConnectionUtil.getPreferenceObj(config[String](SequoiadbConfig.Preference)))
+      
+      val preferenceObj = ConnectionUtil.getPreferenceObj (
+                                              ConnectionUtil.getPreferenceStr(
+                                                  config[String](SequoiadbConfig.Preference)
+                                                  )
+                                         )
+      
+      connection.get.setSessionAttr(preferenceObj)
       // get replica group
       rg_list = getReplicaGroup ( connection.get )
       // if there's no replica group can be found, let's return the current connected node
@@ -239,8 +247,13 @@ case class SequoiadbPartitioner(
           ConnectionUtil.initSequoiadbOptions ))
       // pickup a connection
       connection = Option(ds.get.getConnection)
-      connection.get.setSessionAttr(
-          ConnectionUtil.getPreferenceObj(config[String](SequoiadbConfig.Preference)))
+      
+      val preferenceObj = ConnectionUtil.getPreferenceObj (
+                                              ConnectionUtil.getPreferenceStr(
+                                                  config[String](SequoiadbConfig.Preference)
+                                                  )
+                                         )
+      connection.get.setSessionAttr(preferenceObj)
       // get sdb collection
       val collection = connection.get.getCollectionSpace(
           config[String](SequoiadbConfig.CollectionSpace)).getCollection(
@@ -351,8 +364,13 @@ case class SequoiadbPartitioner(
           ConnectionUtil.initSequoiadbOptions ))
       // pickup a connection
       connection = Option(ds.get.getConnection)
-      connection.get.setSessionAttr(
-          ConnectionUtil.getPreferenceObj(config[String](SequoiadbConfig.Preference)))   
+      
+      val preferenceObj = ConnectionUtil.getPreferenceObj (
+                                              ConnectionUtil.getPreferenceStr(
+                                                  config[String](SequoiadbConfig.Preference)
+                                                  )
+                                         )
+      connection.get.setSessionAttr(preferenceObj)   
 
       LOG.info ("queryObj = " + queryObj.toString)
       val cursor = connection.get.getCollectionSpace(
@@ -436,9 +454,9 @@ case class SequoiadbPartitioner(
     } // finally
     
     
-    LOG.debug ("partition seq before, partition_list = " + SequoiadbPartitioner.getConnInfo (partition_list.get))
+    LOG.info ("partition seq before, partition_list = " + SequoiadbPartitioner.getConnInfo (partition_list.get))
     partition_list = SequoiadbPartitioner.seqPartitionList (partition_list)
-    LOG.debug ("partition seq over, partition_list = " + SequoiadbPartitioner.getConnInfo (partition_list.get))
+    LOG.info ("partition seq over, partition_list = " + SequoiadbPartitioner.getConnInfo (partition_list.get))
     partition_list.get
   }
 }
