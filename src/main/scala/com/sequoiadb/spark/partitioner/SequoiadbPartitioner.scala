@@ -64,6 +64,18 @@ case class SequoiadbPartitioner(
                                 config[String](SequoiadbConfig.Collection)
 
   private var LOG: Logger = LoggerFactory.getLogger(this.getClass.getName())
+  
+  /**
+   * Get SequoiaDB CL Obj by cs_cl_name string
+   * @param connection SequoiaDB connection object
+   * @param cs_cl_name string
+   */
+  private def getCLObject (conn: Sequoiadb, _collectionname: String): DBCollection = {
+    val _col = _collectionname.split('.')
+    val collectionspacename = _col(0)
+    val collectionname = if ( _col.length > 1 ) _col(1) else ""
+    return conn.getCollectionSpace(collectionspacename).getCollection(collectionname)
+  }
 
   /**
    * Get database replication group information
@@ -273,9 +285,7 @@ case class SequoiadbPartitioner(
       }
       cursor.close
       
-      def getCLObject (conn: Sequoiadb, cs: String, cl: String): DBCollection = {
-          return conn.getCollectionSpace(cs).getCollection(cl)
-      }
+      
       
       
       def getQueryMetaObj (clObject: DBCollection, queryObj: BSONObject): Array[BSONObject] = {
@@ -303,10 +313,8 @@ case class SequoiadbPartitioner(
       
       var partition_id = 0
       for (_collectionname <- collectionSet) {
-        val _col = _collectionname.split('.')
-        val collectionspacename = _col(0)
-        val collectionname = if ( _col.length > 1 ) _col(1) else ""
-        val _metaObjList = getQueryMetaObj (getCLObject (connection.get, collectionspacename, collectionname), queryObj)
+        
+        val _metaObjList = getQueryMetaObj (getCLObject (connection.get, _collectionname), queryObj)
         
         for (_obj <- _metaObjList){
           val metaObj: BasicBSONObject = new BasicBSONObject ()
@@ -365,31 +373,64 @@ case class SequoiadbPartitioner(
                                                   )
                                          )
       connection.get.setSessionAttr(preferenceObj)   
+      
+      val csName = config[String](SequoiadbConfig.CollectionSpace)
+      val clname = config[String](SequoiadbConfig.Collection)
 
       LOG.info ("queryObj = " + queryObj.toString)
       val cursor = connection.get.getCollectionSpace(
-          config[String](SequoiadbConfig.CollectionSpace)).getCollection(
-            config[String](SequoiadbConfig.Collection)
+          csName).getCollection(
+            clname
           ).explain (queryObj, null, null, null, 0, -1, 0, null)
       
-      var breakValue = true
+      var breakValue = false
       var IsExplainHaveValue = false
-      while ( cursor.hasNext && breakValue ) {
+      var IsMainSubCL = false
+      var IsSubCLSplited = false
+      
+      def checkCLIsSplited (CL : DBCollection, queryObj : BSONObject) : Boolean = {
+        val cursor = CL.explain (queryObj, null, null, null, 0, -1, 0, null)
+        var i = 0
+        while (cursor.hasNext) {
+          i=1+i;
+          cursor.getNext
+        }
+        cursor.close 
+        
+        if (i <= 1) {
+          return false
+        } else {
+          return true
+        } 
+        
+        return false
+      }
+      
+      while ( cursor.hasNext && !breakValue ) {
         IsExplainHaveValue = true
         // note each row represent a group
         val row = SequoiadbRowConverter.dbObjectToMap(cursor.getNext)
         if ( row.contains("SubCollections") ) {
           // if subcollections field exist, that means it's main cl
+          IsMainSubCL = true
           for ( collection <- SequoiadbRowConverter.dbObjectToMap(
             row("SubCollections").asInstanceOf[BasicBSONList]) ) {
             // get the collection name
             scanType = Option(collection._2.asInstanceOf[BSONObject].get("ScanType").asInstanceOf[String])
-            breakValue = false
+            
+            val _collectionname = collection._2.asInstanceOf[BSONObject].get("Name").asInstanceOf[String]
+            val CL = getCLObject (connection.get , _collectionname)
+            if (checkCLIsSplited (CL, queryObj)) {
+              IsSubCLSplited = true
+              breakValue = true
+            }
           }
         } else {
           // otherwise it means normal cl
           scanType = Option(row("ScanType").asInstanceOf[String])
-          breakValue = false
+          IsMainSubCL = false
+          IsSubCLSplited = false
+          breakValue = true
         }
       }
       cursor.close
@@ -419,8 +460,18 @@ case class SequoiadbPartitioner(
       else { // checkScanType = 'auto'
         // this query is table scan, then get SDB data by getQueryMeta
         if ( scanType.get.equals("tbscan")) {
-          LOG.info ("This query is table scan, then get SDB data by getQueryMeta")
-          partition_list = Option(computePartitionsByGetQueryMeta (queryObj))
+          if (IsMainSubCL && IsSubCLSplited) {
+            LOG.info ("This query is table scan")
+            LOG.info (csName + "." + clname + " is MainCL, and SubCL is been splited")
+            LOG.info ("Then get SDB data by explain")
+            partition_list = Option(computePartitionsByExplain (queryObj))
+          }
+          else {
+            LOG.info ("This query is table scan")
+            LOG.info (csName + "." + clname + " is normal CL")
+            LOG.info ("Then get SDB data by getQueryMeta")
+            partition_list = Option(computePartitionsByGetQueryMeta (queryObj))
+          }
         }
         // this query is index scan, then get SDB data by explain
         else if (scanType.get.equals("ixscan")) { 
@@ -448,9 +499,9 @@ case class SequoiadbPartitioner(
     } // finally
     
     
-    LOG.info ("partition seq before, partition_list = " + SequoiadbPartitioner.getConnInfo (partition_list.get))
+    LOG.debug ("partition seq before, partition_list = " + SequoiadbPartitioner.getConnInfo (partition_list.get))
     partition_list = SequoiadbPartitioner.seqPartitionList (partition_list)
-    LOG.info ("partition seq over, partition_list = " + SequoiadbPartitioner.getConnInfo (partition_list.get))
+    LOG.debug ("partition seq over, partition_list = " + SequoiadbPartitioner.getConnInfo (partition_list.get))
     partition_list.get
   }
 }
@@ -839,5 +890,7 @@ object SequoiadbPartitioner {
     return Option (partition_list_last.toArray)
     
   }
+  
+  
 }
 
