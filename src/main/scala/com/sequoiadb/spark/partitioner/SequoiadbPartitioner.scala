@@ -37,10 +37,6 @@ import com.sequoiadb.base.SequoiadbDatasource
 import com.sequoiadb.base.Sequoiadb
 import com.sequoiadb.base.DBQuery
 import com.sequoiadb.exception.BaseException
-// this. is for sdb 2.6 java driver
-import com.sequoiadb.exception.SDBErrorLookup
-// this is for sdb 2.8 java driver
-//import com.sequoiadb.exception.SDBError
 import org.bson.BSONObject
 import org.bson.BasicBSONObject
 import org.bson.types.BasicBSONList
@@ -92,12 +88,10 @@ case class SequoiadbPartitioner(
       // if we get SDB_RTN_COORD_ONLY error, that means we connect to standalone or data node
       // in that case we simply return null instead of throwing exception
       case ex: BaseException => {
-        // this is for sdb 2.6 java driver
-        if ( ex.getErrorCode == SDBErrorLookup.getErrorCodeByType("SDB_RTN_COORD_ONLY")) {
-          // this is for sdb 2.8 java driver
-//        if ( SDBError.getSDBError(ex.getErrorCode)  == SDBError.SDB_RTN_COORD_ONLY) {
+        if (ex.getErrorType.equals("SDB_RTN_COORD_ONLY")) {
           None
         }
+        
         else {
           throw SequoiadbException(ex.getMessage, ex)
         }
