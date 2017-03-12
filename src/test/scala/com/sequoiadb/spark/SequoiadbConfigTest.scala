@@ -19,6 +19,8 @@ package com.sequoiadb.spark
 
 import org.scalatest.{FlatSpec, Matchers}
 import collection.mutable.Stack
+import com.sequoiadb.spark.util.ConnectionUtil
+import org.bson.BasicBSONObject
 
 /**
  * Source File Name = SequoiadbConfigTest.scala
@@ -40,6 +42,14 @@ with Matchers {
     private val preference : String = "M"
     private val scanType : String = "ixscan"
     private val bulksize : String = "1024"
+    
+    val preference_M = new BasicBSONObject ();
+    val preference_r = new BasicBSONObject ();
+    val preference_A = new BasicBSONObject ();
+    preference_M.put ("PreferedInstance", "M");
+    preference_r.put ("PreferedInstance", "r");
+    preference_A.put ("PreferedInstance", "A");
+    
     
     "Config" should "be initialized successful" in {
       val testConfig = SequoiadbConfigBuilder()
@@ -73,7 +83,10 @@ with Matchers {
       testConfig.get[Float](SequoiadbConfig.SamplingRatio).getOrElse("") should equal(1.0)
       testConfig.get[String](SequoiadbConfig.Username).getOrElse("") should equal(username)
       testConfig.get[String](SequoiadbConfig.Password).getOrElse("") should equal(password)
-      testConfig.get[String](SequoiadbConfig.Preference).getOrElse("") should equal("{PreferedInstance:\"M\"}")
+      testConfig.get[String](SequoiadbConfig.Preference).getOrElse("") should equal(preference_M.toString)
+      ConnectionUtil.getPreferenceStr(
+          testConfig[String](SequoiadbConfig.Preference)
+          ) should equal (preference_M.toString);
       testConfig.get[String](SequoiadbConfig.ScanType).getOrElse("") should equal(scanType)
       testConfig.get[Integer](SequoiadbConfig.BulkSize).getOrElse("") should equal(bulksize)
     }
@@ -90,13 +103,17 @@ with Matchers {
       .set(SequoiadbConfig.ScanType, "")
       .set(SequoiadbConfig.BulkSize, "-23")
       .build()
+
       testConfig.get[List[String]](SequoiadbConfig.Host).getOrElse("") should equal (List("localhost" + ":" + 11810))
       testConfig.get[String](SequoiadbConfig.CollectionSpace).getOrElse("") should equal(collectionspace)
       testConfig.get[String](SequoiadbConfig.Collection).getOrElse("") should equal(collection)
       testConfig.get[Float](SequoiadbConfig.SamplingRatio).getOrElse("") should equal(1.0)
       testConfig.get[String](SequoiadbConfig.Username).getOrElse("") should equal("")
       testConfig.get[String](SequoiadbConfig.Password).getOrElse("") should equal("")
-      testConfig.get[String](SequoiadbConfig.Preference).getOrElse("") should equal("{PreferedInstance:\"r\"}")
+      testConfig.get[String](SequoiadbConfig.Preference).getOrElse("") should equal(preference_r.toString)
+      ConnectionUtil.getPreferenceStr(
+          testConfig[String](SequoiadbConfig.Preference)
+          ) should equal (preference_A.toString);
       testConfig.get[String](SequoiadbConfig.ScanType).getOrElse("") should equal("auto")
       testConfig.get[Integer](SequoiadbConfig.BulkSize).getOrElse("") should equal("512")
     }
@@ -113,7 +130,10 @@ with Matchers {
       .set(SequoiadbConfig.ScanType, "")
       .set(SequoiadbConfig.BulkSize, "")
       .build()
-      testConfig.get[String](SequoiadbConfig.Preference).getOrElse("") should equal("{PreferedInstance:\"r\"}")
+      testConfig.get[String](SequoiadbConfig.Preference).getOrElse("") should equal(preference_r.toString)
+      ConnectionUtil.getPreferenceStr(
+          testConfig[String](SequoiadbConfig.Preference)
+          ) should equal (preference_A.toString);
     }
     
     

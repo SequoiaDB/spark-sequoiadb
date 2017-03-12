@@ -68,8 +68,7 @@ class SequoiadbWriter(config: SequoiadbConfig) extends Serializable {
           ConnectionUtil.initSequoiadbOptions ))
       // pickup a connection
       connection = Option(ds.get.getConnection)
-      connection.get.setSessionAttr(
-          ConnectionUtil.getPreferenceObj(config[String](SequoiadbConfig.Preference)))
+      
       // locate collection
       val cl = connection.get.getCollectionSpace(
           config[String](SequoiadbConfig.CollectionSpace)).getCollection(

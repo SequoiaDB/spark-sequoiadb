@@ -33,6 +33,7 @@ import scala.reflect.ClassTag
 import com.sequoiadb.base.DBQuery
 import org.bson.util.JSON
 import org.bson.BSONObject
+import org.bson.BasicBSONObject
 
 case class SequoiadbConfigBuilder(
   val properties: Map[Property,Any] = Map()) extends Serializable { build =>
@@ -112,8 +113,10 @@ class SequoiadbConfig (
         case "R" => "r"
         case _   => SequoiadbConfig.DefaultPreference
       }
+      val preference_tmp = new BasicBSONObject ();
+      preference_tmp.put ("PreferedInstance", preferenceValue);
       return Option (
-            ("{PreferedInstance:\"" + preferenceValue + "\"}").asInstanceOf[T]
+            preference_tmp.toString.asInstanceOf[T]
           )
     }
     if (property.equals(SequoiadbConfig.BulkSize)) {
@@ -184,9 +187,11 @@ object SequoiadbConfig {
   val DefaultScanType = "auto"
   val DefaultBulkSize = "512"
 
+  val preference_defaultObj = new BasicBSONObject ();
+  preference_defaultObj.put ("PreferedInstance", DefaultPreference);
   val Defaults = Map(
     SamplingRatio -> DefaultSamplingRatio,
-    Preference -> ("{PreferedInstance:\"" + DefaultPreference + "\"}"),
+    Preference -> (preference_defaultObj.toString),
     ScanType -> DefaultScanType,
     Host -> List(DefaultHost + ":" + DefaultPort),
     Username -> (DefaultUsername),
