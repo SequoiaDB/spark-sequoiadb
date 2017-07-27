@@ -289,9 +289,14 @@ case class SequoiadbPartitioner(
       
       
       def getQueryMetaObj (clObject: DBCollection, queryObj: BSONObject): Array[BSONObject] = {
+        
+        // if sdb scanType = idxscan, then getQueryMeta will throw error,so we set hint to change query explain
+        val hintObj:BSONObject = new BasicBSONObject()
+        hintObj.put ("", null)
+        
         val bson_list: ArrayBuffer[BSONObject] = ArrayBuffer[BSONObject]()
        
-        val cursor = clObject.getQueryMeta(queryObj, null, null, 0, -1, 0)
+        val cursor = clObject.getQueryMeta(queryObj, null, hintObj, 0, -1, 0)
         while (cursor.hasNext) {
           val tmp = SequoiadbRowConverter.dbObjectToMap(cursor.getNext)
           for (block <- SequoiadbRowConverter.dbObjectToMap(tmp("Datablocks").asInstanceOf[BasicBSONList])){
